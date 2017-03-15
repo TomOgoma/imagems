@@ -4,23 +4,54 @@ import (
 	"golang.org/x/net/context"
 	"github.com/tomogoma/imagems/server/proto"
 	"net/http"
+	"github.com/tomogoma/go-commons/auth/token"
+	"time"
 )
 
+type Model interface {
+	NewImage(*token.Token, int64, []byte) (string, string, error)
+	IsUnauthorizedError(error) bool
+	IsClientError(error) bool
+}
+
 func (s *Server) NewImage(c context.Context, req *image.NewImageRequest, resp *image.NewImageResponse) error {
-	resp.Id = s.id
 	tID := <-s.tIDCh
 	s.log.Info("%d - New image request", tID)
-	_, err := s.token.Validate(req.Token);
+	st := time.Now().Format(timeFormat)
+	tkn, err := s.token.Validate(req.Token);
 	if err != nil {
 		if s.token.IsClientError(err) {
-			resp.Code = http.StatusUnauthorized
-			resp.Detail = err.Error()
+			s.errorImageResponse(http.StatusUnauthorized, err.Error(), st, resp)
 			return nil
 		}
-		resp.Code = http.StatusInternalServerError
-		resp.Detail = SomethingWickedError
+		s.errorImageResponse(http.StatusInternalServerError, SomethingWickedError, st, resp)
 		s.log.Error("%d - Failed to validate user token: %s", tID, err)
 		return nil
 	}
+	st, url, err := s.model.NewImage(tkn, req.UserID, req.Image)
+	if err != nil {
+		if s.model.IsUnauthorizedError(err) {
+			s.errorImageResponse(http.StatusUnauthorized, err.Error(), st, resp)
+			return nil
+		}
+		if s.model.IsClientError(err) {
+			s.errorImageResponse(http.StatusBadRequest, err.Error(), st, resp)
+			return nil
+		}
+		s.errorImageResponse(http.StatusInternalServerError, SomethingWickedError, st, resp)
+		s.log.Error("%d - Failed to save image: %s", tID, err)
+		return nil
+	}
+	resp.Code = http.StatusCreated
+	resp.ImageURL = url
+	resp.Id = s.id
+	resp.ServerTime = st
 	return nil
+}
+
+func (s *Server) errorImageResponse(status int, det, srvTm string, r *image.NewImageResponse) {
+	r.Code = int32(status)
+	r.Detail = det
+	r.ServerTime = srvTm
+	r.Id = s.id
 }

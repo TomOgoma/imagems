@@ -7,6 +7,7 @@ import (
 
 func (s *Server) HandleRoute(r *mux.Router) {
 	r.HandleFunc("/status", statusHandler)
+	r.Handle("/", http.FileServer(http.Dir(s.imgsDir))).Methods("GET")
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {

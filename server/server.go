@@ -4,6 +4,9 @@ import (
 	"errors"
 	"github.com/tomogoma/go-commons/auth/token"
 	"github.com/tomogoma/go-commons/server/helper"
+	"time"
+	"os"
+	"fmt"
 )
 
 type Logger interface {
@@ -17,35 +20,57 @@ type TokenValidator interface {
 	IsClientError(error) bool
 }
 
-type Model interface {
+type Config interface {
+	ImagesDir() string
+	ID() string
 }
 
 type Server struct {
-	token TokenValidator
-	log   Logger
-	tIDCh chan int
-	id    string
+	token   TokenValidator
+	log     Logger
+	tIDCh   chan int
+	id      string
+	imgsDir string
+	model   Model
 }
 
 const (
 	SomethingWickedError = "Something wicked happened"
 )
 
-var ErrorNilTokenValidator = errors.New("TokenValidator was nil")
-var ErrorNilLogger = errors.New("Logger was nil")
-var ErrorEmptyID = errors.New("ID was empty")
+var timeFormat = time.RFC3339
 
-func New(ID string, tv TokenValidator, lg Logger) (*Server, error) {
+func New(c Config, tv TokenValidator, m Model, lg Logger) (*Server, error) {
 	if tv == nil {
-		return nil, ErrorNilTokenValidator
+		return nil, errors.New("TokenValidator was nil")
+	}
+	if m == nil {
+		return nil, errors.New("Model was nil")
 	}
 	if lg == nil {
-		return nil, ErrorNilLogger
+		return nil, errors.New("Logger was nil")
 	}
-	if ID == "" {
-		return nil, ErrorEmptyID
+	if err := validateConfig(c); err != nil {
+		return nil, err
 	}
 	tIDCh := make(chan int)
 	go helper.TransactionSerializer(tIDCh)
-	return &Server{id: ID, token: tv, log:lg, tIDCh: tIDCh}, nil
+	return &Server{id: c.ID(), imgsDir: c.ImagesDir(), model: m, token: tv, log:lg, tIDCh: tIDCh}, nil
+}
+
+func validateConfig(c Config) error {
+	if c == nil {
+		return errors.New("Config was nil")
+	}
+	if c.ID() == "" {
+		return errors.New("ID was empty")
+	}
+	imDir := c.ImagesDir()
+	if imDir == "" {
+		return errors.New("No image dir provided")
+	}
+	if err := os.MkdirAll(imDir, 0755); err != nil {
+		return fmt.Errorf("Unable to access or create image dir: %v", err)
+	}
+	return nil
 }

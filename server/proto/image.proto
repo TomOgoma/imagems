@@ -14,6 +14,7 @@ message NewImageRequest {
 message NewImageResponse {
     string id = 1;
     int32 code = 2;
-    string imageURL = 3;
-    string detail = 4;
+    string serverTime = 3;
+    string imageURL = 4;
+    string detail = 5;
 }
