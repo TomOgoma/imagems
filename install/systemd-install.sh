@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-# TODO SEEDMS change seedms the microservice's name (prefer it similar to name constant in main.go)
-NAME="seedms"
+NAME="imagems"
 BUILD_NAME="${NAME}-installer-version"
 CONF_DIR="/etc/${NAME}"
 CONF_FILE="${CONF_DIR}/${NAME}.conf.yaml"

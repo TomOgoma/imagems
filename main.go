@@ -3,23 +3,23 @@ package main
 import (
 	"flag"
 	"time"
-	"github.com/limetext/log4go"
-	"github.com/micro/go-micro"
-	// TODO SEEDMS fix imports after renaming project root folder
-	// (replace all "github.com/tomogoma/seedms" refs with new path)
-	"github.com/tomogoma/seedms/server"
-	"github.com/tomogoma/seedms/server/proto"
-	"github.com/tomogoma/go-commons/auth/token"
-	confhelper "github.com/tomogoma/go-commons/config"
-	"github.com/tomogoma/seedms/config"
 	"runtime"
 	"fmt"
+	"github.com/limetext/log4go"
+	"github.com/micro/go-micro"
+	"github.com/tomogoma/imagems/server"
+	"github.com/tomogoma/imagems/server/proto"
+	"github.com/tomogoma/go-commons/auth/token"
+	confhelper "github.com/tomogoma/go-commons/config"
+	"github.com/tomogoma/imagems/config"
+	"github.com/micro/go-web"
+	"github.com/gorilla/mux"
 )
 
 const (
-	// TODO SEEDMS change the name of the micro-service to a desired value
-	// (preferably the same as the NAME value in install/systemd-install.sh)
-	name = "seedms"
+	name = "imagems"
+	apiID = "go.micro.api." + name
+	webID = "go.micro.web." + name
 	version = "0.1.0"
 	confCommand = "conf"
 	defaultConfFile = "/etc/" + name + "/" + name + ".conf.yaml"
@@ -58,19 +58,34 @@ func bootstrap(log Logger, conf config.Config) error {
 	if err != nil {
 		return fmt.Errorf("Error instantiating token validator: %s", err)
 	}
-	srv, err := server.New(name, tv, log);
+	srv, err := server.New(apiID, tv, log);
 	if err != nil {
-		return fmt.Errorf("Error instantiating server: %s", err)
+		return fmt.Errorf("Error instantiating rpc server: %s", err)
 	}
-	service := micro.NewService(
-		micro.Name(name),
+	rpc := micro.NewService(
+		micro.Name(apiID),
 		micro.Version(version),
 		micro.RegisterInterval(conf.Service.RegisterInterval),
 	)
-	// TODO SEEDMS modify this to match .proto file specification
-	seed.RegisterSeedHandler(service.Server(), srv)
-	if err := service.Run(); err != nil {
-		return fmt.Errorf("Error serving: %s", err)
-	}
-	return nil
+	image.RegisterImageHandler(rpc.Server(), srv)
+	wb := web.NewService(
+		web.Name(webID),
+		web.Version(version),
+		web.RegisterInterval(conf.Service.RegisterInterval),
+	)
+	r := mux.NewRouter()
+	srv.HandleRoute(r)
+	wb.Handle("/", r)
+	errCH := make(chan error)
+	go func() {
+		if err := rpc.Run(); err != nil {
+			errCH <- fmt.Errorf("Error serving rpc: %s", err)
+		}
+	}()
+	go func() {
+		if err := wb.Run(); err != nil {
+			errCH <- fmt.Errorf("Error serving web: %s", err)
+		}
+	}()
+	return <-errCH
 }

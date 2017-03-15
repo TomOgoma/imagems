@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-# TODO SEEDMS change seedms to be similar to value in systemd-install.sh
-NAME="seedms"
+NAME="imagems"
 APP_FILE="/usr/local/bin/${NAME}"
 UNIT_FILE="/etc/systemd/system/${NAME}.service"
 CONF_DIR="/etc/${NAME}"

@@ -2,7 +2,7 @@ package main
 
 import (
 	"testing"
-	"github.com/tomogoma/seedms/config"
+	"github.com/tomogoma/imagems/config"
 	"flag"
 	confhelper "github.com/tomogoma/go-commons/config"
 	"github.com/limetext/log4go"

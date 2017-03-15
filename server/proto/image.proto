@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+service Image {
+    rpc NewImage (NewImageRequest) returns (NewImageResponse) {
+    }
+}
+
+message NewImageRequest {
+    string token = 1;
+    int64 userID = 2;
+    bytes image = 3;
+}
+
+message NewImageResponse {
+    string id = 1;
+    int32 code = 2;
+    string imageURL = 3;
+    string detail = 4;
+}

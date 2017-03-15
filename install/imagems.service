@@ -1,0 +1,12 @@
+[Unit]
+Description=Image Processing and Micro-Service
+After=cockroach.service
+Requires=cockroach.service
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+ExecStart=/usr/local/bin/imagems
+SyslogIdentifier=imagems
+Restart=always

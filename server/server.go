@@ -2,9 +2,6 @@ package server
 
 import (
 	"errors"
-	"golang.org/x/net/context"
-	"github.com/tomogoma/seedms/server/proto"
-	"net/http"
 	"github.com/tomogoma/go-commons/auth/token"
 	"github.com/tomogoma/go-commons/server/helper"
 )
@@ -51,25 +48,4 @@ func New(ID string, tv TokenValidator, lg Logger) (*Server, error) {
 	tIDCh := make(chan int)
 	go helper.TransactionSerializer(tIDCh)
 	return &Server{id: ID, token: tv, log:lg, tIDCh: tIDCh}, nil
-}
-
-func (s *Server) Hello(c context.Context, req *seed.HelloRequest, resp *seed.HelloResponse) error {
-	resp.Id = s.id
-	tID := <-s.tIDCh
-	s.log.Info("%d - Hello request", tID)
-	_, err := s.token.Validate(req.Token);
-	if err != nil {
-		if s.token.IsClientError(err) {
-			resp.Code = http.StatusUnauthorized
-			resp.Detail = err.Error()
-			return nil
-		}
-		resp.Code = http.StatusInternalServerError
-		resp.Detail = SomethingWickedError
-		s.log.Error("%d - Failed to validate user token: %s", tID, err)
-		return nil
-	}
-	resp.Code = http.StatusOK
-	resp.Greeting = "Hello " + req.Name
-	return nil
 }

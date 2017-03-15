@@ -1,0 +1,26 @@
+# Image Processing Micro-Service configuration file
+#
+# - case is very important; maintain the case.
+# - indentation is very important; mind the indentation.
+# - all strings containing special characters should be escaped by double quotes.
+#   Special characters include:
+#   ` [] {} : > | ` .
+#
+
+# service configures the Micro-service's runtime profile.
+service:
+
+  # registerInterval configures how often a micro-service should ping the front
+  # facing Gateway API with alive packets. Formatting is as follows:
+  # 2d3h4m5s -> after every "2 days, 3 hours, 4 minutes and 5 seconds"
+  registerInterval: 5s
+
+# auth configures authentication/authorization values.
+auth:
+
+  # tokenKeyFile defines the location of the file containing the token key.
+  # - The file should only contain the token key and no special/extra characters.
+  # - Typically, the file is a copy of the file used by the token generating
+  #   entity to generate tokens e.g. https://github.com/tomogoma/authms 's
+  #   tokenKeyFile.
+  tokenKeyFile: /etc/authms/ssh-keys/sha256.key

@@ -3,14 +3,8 @@ package server_test
 import (
 	"testing"
 	"github.com/tomogoma/go-commons/auth/token"
-	"github.com/tomogoma/seedms/server"
+	"github.com/tomogoma/imagems/server"
 	"github.com/limetext/log4go"
-	"golang.org/x/net/context"
-	"github.com/tomogoma/seedms/server/proto"
-	"net/http"
-	"fmt"
-	"errors"
-	"reflect"
 )
 
 type TokenValidatorMock struct {
@@ -58,80 +52,5 @@ func TestNew_nilLogger(t *testing.T) {
 	_, err := server.New(srvID, &TokenValidatorMock{}, nil)
 	if err == nil {
 		t.Fatal("Expected an error but got nil")
-	}
-}
-
-func TestServer_Hello(t *testing.T) {
-	type HelloTC struct {
-		Desc    string
-		TknVal  *TokenValidatorMock
-		Req     *seed.HelloRequest
-		ExpResp *seed.HelloResponse
-	}
-	tcs := []HelloTC{
-		{
-			Desc: "Greeting success",
-			TknVal: &TokenValidatorMock{
-				ExpErr: nil,
-				ExpClErr: false,
-			},
-			Req: &seed.HelloRequest{
-				Token: "some.valid.token",
-				Name: "Test Bot",
-			},
-			ExpResp: &seed.HelloResponse{
-				Code: http.StatusOK,
-				Greeting: "Hello Test Bot",
-				Id: srvID,
-			},
-		},
-		{
-			Desc: "Invalid token reported",
-			TknVal: &TokenValidatorMock{
-				ExpErr: errors.New("Bad token!"),
-				ExpClErr: true,
-			},
-			Req: &seed.HelloRequest{
-				Token: "some.invalid.token",
-				Name: "Test Bot",
-			},
-			ExpResp: &seed.HelloResponse{
-				Code: http.StatusUnauthorized,
-				Id: srvID,
-				Detail: "Bad token!",
-			},
-		},
-		{
-			Desc: "Token validation error",
-			TknVal: &TokenValidatorMock{
-				ExpErr: errors.New("Internal error"),
-				ExpClErr: false,
-			},
-			Req: &seed.HelloRequest{
-				Token: "some.valid.token",
-				Name: "Test Bot",
-			},
-			ExpResp: &seed.HelloResponse{
-				Code: http.StatusInternalServerError,
-				Id: srvID,
-				Detail: server.SomethingWickedError,
-			},
-		},
-	}
-	for _, tc := range tcs {
-		s, err := server.New(srvID, tc.TknVal, logger)
-		if err != nil {
-			t.Fatalf("server.New(): %v", err)
-		}
-		resp := new(seed.HelloResponse)
-		fmt.Println(s)
-		err = s.Hello(context.TODO(), tc.Req, resp)
-		if err != nil {
-			t.Fatalf("%s - server.Hello(): %v", tc.Desc, err)
-		}
-		if !reflect.DeepEqual(tc.ExpResp, resp) {
-			t.Errorf("%s - Unexpected response:\nExpect:\t%+v\nGot:\t%+v",
-				tc.Desc, tc.ExpResp, resp)
-		}
 	}
 }
