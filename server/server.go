@@ -65,12 +65,8 @@ func validateConfig(c Config) error {
 	if c.ID() == "" {
 		return errors.New("ID was empty")
 	}
-	imDir := c.ImagesDir()
-	if imDir == "" {
-		return errors.New("No image dir provided")
-	}
-	if err := os.MkdirAll(imDir, 0755); err != nil {
-		return fmt.Errorf("Unable to access or create image dir: %v", err)
+	if _, err := os.Stat(c.ImagesDir()); err != nil {
+		return fmt.Errorf("Unable to access images dir: %v", err)
 	}
 	return nil
 }

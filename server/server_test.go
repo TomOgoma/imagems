@@ -60,6 +60,7 @@ var srvTm = time.Now().Format(time.RFC3339)
 var validConfig = &ConfigMock{ExpSrvID: srvID, ExpImDir: imgDir}
 
 func TestNew(t *testing.T) {
+	setUp(t)
 	defer tearDown(t)
 	s, err := server.New(validConfig, &TokenValidatorMock{}, &ModelMock{}, logger)
 	if err != nil {
@@ -71,6 +72,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestNew_nilConfig(t *testing.T) {
+	setUp(t)
 	defer tearDown(t)
 	_, err := server.New(nil, &TokenValidatorMock{}, &ModelMock{}, logger)
 	if err == nil {
@@ -79,6 +81,7 @@ func TestNew_nilConfig(t *testing.T) {
 }
 
 func TestNew_emptyID(t *testing.T) {
+	setUp(t)
 	defer tearDown(t)
 	_, err := server.New(&ConfigMock{ExpImDir: imgDir}, &TokenValidatorMock{}, &ModelMock{}, logger)
 	if err == nil {
@@ -86,9 +89,11 @@ func TestNew_emptyID(t *testing.T) {
 	}
 }
 
-func TestNew_EmptyImgDirName(t *testing.T) {
+func TestNew_NonExistImgDir(t *testing.T) {
+	setUp(t)
 	defer tearDown(t)
-	_, err := server.New(&ConfigMock{ExpSrvID: srvID}, &TokenValidatorMock{}, &ModelMock{}, logger)
+	_, err := server.New(&ConfigMock{ExpSrvID: srvID, ExpImDir: "test/some/non-exist/img/dir"},
+		&TokenValidatorMock{}, &ModelMock{}, logger)
 	if err == nil {
 		t.Fatal("Expected an error but got nil")
 	}
@@ -96,6 +101,7 @@ func TestNew_EmptyImgDirName(t *testing.T) {
 
 // this test will fail if run as root
 func TestNew_uncreateableDir(t *testing.T) {
+	setUp(t)
 	defer tearDown(t)
 	_, err := server.New(&ConfigMock{ExpImDir:"/tmp/imagems_test"}, &TokenValidatorMock{}, &ModelMock{}, logger)
 	if err == nil {
@@ -104,6 +110,7 @@ func TestNew_uncreateableDir(t *testing.T) {
 }
 
 func TestNew_nilTokenValidator(t *testing.T) {
+	setUp(t)
 	defer tearDown(t)
 	_, err := server.New(validConfig, nil, &ModelMock{}, logger)
 	if err == nil {
@@ -112,6 +119,7 @@ func TestNew_nilTokenValidator(t *testing.T) {
 }
 
 func TestNew_nilModel(t *testing.T) {
+	setUp(t)
 	defer tearDown(t)
 	_, err := server.New(validConfig, &TokenValidatorMock{}, nil, logger)
 	if err == nil {
@@ -120,10 +128,17 @@ func TestNew_nilModel(t *testing.T) {
 }
 
 func TestNew_nilLogger(t *testing.T) {
+	setUp(t)
 	defer tearDown(t)
 	_, err := server.New(validConfig, &TokenValidatorMock{}, &ModelMock{}, nil)
 	if err == nil {
 		t.Fatal("Expected an error but got nil")
+	}
+}
+
+func setUp(t *testing.T) {
+	if err := os.MkdirAll(imgDir, 0755); err != nil {
+		t.Fatalf("Error setting up (creating test images dir): %v", err)
 	}
 }
 

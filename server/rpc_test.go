@@ -11,6 +11,7 @@ import (
 )
 
 func TestServer_NewImage(t *testing.T) {
+	setUp(t)
 	defer tearDown(t)
 	type NewImageTC struct {
 		Desc    string

@@ -14,15 +14,8 @@ import (
 	"github.com/tomogoma/imagems/config"
 	"github.com/micro/go-web"
 	"github.com/gorilla/mux"
-)
-
-const (
-	name = "imagems"
-	apiID = "go.micro.api." + name
-	webID = "go.micro.web." + name
-	version = "0.1.0"
-	confCommand = "conf"
-	defaultConfFile = "/etc/" + name + "/" + name + ".conf.yaml"
+	"path"
+	"github.com/tomogoma/imagems/model"
 )
 
 type Logger interface {
@@ -31,6 +24,26 @@ type Logger interface {
 	Warn(interface{}, ...interface{}) error
 	Error(interface{}, ...interface{}) error
 }
+
+type ServiceConfig config.Service
+
+func (sc ServiceConfig) ImagesDir() string {
+	return path.Join(sc.DataDir, imgsDirName)
+}
+
+func (sc ServiceConfig) ID() string {
+	return apiID
+}
+
+const (
+	name = "imagems"
+	apiID = "go.micro.api." + name
+	webID = "go.micro.web." + name
+	version = "0.1.0"
+	confCommand = "conf"
+	defaultConfFile = "/etc/" + name + "/" + name + ".conf.yaml"
+	imgsDirName = "images"
+)
 
 var confFilePath = flag.String(confCommand, defaultConfFile, "path to config file")
 
@@ -58,7 +71,11 @@ func bootstrap(log Logger, conf config.Config) error {
 	if err != nil {
 		return fmt.Errorf("Error instantiating token validator: %s", err)
 	}
-	srv, err := server.New(apiID, tv, log);
+	m, err := model.New(ServiceConfig(conf.Service), nil, nil)
+	if err != nil {
+		return fmt.Errorf("Error instantiating model: %v", err)
+	}
+	srv, err := server.New(ServiceConfig(conf.Service), tv, m, log);
 	if err != nil {
 		return fmt.Errorf("Error instantiating rpc server: %s", err)
 	}

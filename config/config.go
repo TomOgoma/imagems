@@ -7,6 +7,7 @@ import (
 
 type Service struct {
 	RegisterInterval time.Duration `yaml:"registerInterval,omitempty"`
+	DataDir          string `yaml:"dataDir,omitempty"`
 }
 
 type Config struct {
