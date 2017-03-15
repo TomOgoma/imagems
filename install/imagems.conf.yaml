@@ -15,6 +15,14 @@ service:
   # 2d3h4m5s -> after every "2 days, 3 hours, 4 minutes and 5 seconds"
   registerInterval: 5s
 
+  # dataDir is the /path/to/directory holding all state files for the micro-service
+  dataDir: /var/data/imagems
+
+  # imgURL is the base URL assigned to the micro-service for the purpose of
+  # serving images. This is generally the address at which `micro web` listens
+  # at with the `imagems` suffix
+  imgURL: :8082/imagems
+
 # auth configures authentication/authorization values.
 auth:
 
@@ -24,3 +32,17 @@ auth:
   #   entity to generate tokens e.g. https://github.com/tomogoma/authms 's
   #   tokenKeyFile.
   tokenKeyFile: /etc/authms/ssh-keys/sha256.key
+
+# database configures access to the cockroach/postgres data stores
+database:
+
+  userName: root
+  password: ""
+  # the host:port or :port scheme for accessing the database server.
+  host: localhost:26257
+  dbName: imagems
+  sslCert: /etc/cockroachdb/certs/node.cert
+  sslKey: /etc/cockroachdb/certs/node.key
+  sslRootCert: /etc/cockroachdb/certs/ca.cert
+
+

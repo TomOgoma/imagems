@@ -16,6 +16,10 @@ import (
 	"github.com/gorilla/mux"
 	"path"
 	"github.com/tomogoma/imagems/model"
+	"github.com/tomogoma/imagems/db"
+	"os"
+	"io/ioutil"
+	"strings"
 )
 
 type Logger interface {
@@ -25,10 +29,23 @@ type Logger interface {
 	Error(interface{}, ...interface{}) error
 }
 
+type FileWriter func(fileName string, data []byte, perm os.FileMode) error
+
+func (f FileWriter) WriteFile(fName string, dt []byte, perm os.FileMode) error {
+	return f(fName, dt, perm)
+}
+
 type ServiceConfig config.Service
 
 func (sc ServiceConfig) ImagesDir() string {
 	return path.Join(sc.DataDir, imgsDirName)
+}
+
+func (sc ServiceConfig) ImgURLRoot() string {
+	if strings.HasPrefix(sc.ImgURL, "/") {
+		return sc.ImgURL
+	}
+	return sc.ImgURL + "/"
 }
 
 func (sc ServiceConfig) ID() string {
@@ -71,7 +88,11 @@ func bootstrap(log Logger, conf config.Config) error {
 	if err != nil {
 		return fmt.Errorf("Error instantiating token validator: %s", err)
 	}
-	m, err := model.New(ServiceConfig(conf.Service), nil, nil)
+	d, err := db.New(conf.Database)
+	if err != nil {
+		return fmt.Errorf("Error instantiating database: %v", err)
+	}
+	m, err := model.New(ServiceConfig(conf.Service), d, FileWriter(ioutil.WriteFile))
 	if err != nil {
 		return fmt.Errorf("Error instantiating model: %v", err)
 	}

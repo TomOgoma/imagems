@@ -42,10 +42,10 @@ type ModelMock struct {
 	ExpIsClErr      bool
 }
 
-func (m *ModelMock) NewImage(*token.Token, int64, []byte) (string, string, error) {
+func (m *ModelMock) NewImage(*token.Token, []byte) (string, string, error) {
 	return srvTm, m.ExpImURL, m.ExpNewImErr
 }
-func (m *ModelMock) IsUnauthorizedError(error) bool {
+func (m *ModelMock) IsAuthError(error) bool {
 	return m.ExpUnauthorized
 }
 func (m *ModelMock) IsClientError(error) bool {
