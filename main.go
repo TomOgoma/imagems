@@ -78,7 +78,7 @@ func main() {
 		return
 	}
 	err = bootstrap(log, conf)
-	log.Critical(err)
+	log.Critical("Quit with error: %v", err)
 }
 
 // bootstrap collects all the dependencies necessary to start the server,
@@ -119,11 +119,13 @@ func bootstrap(log Logger, conf config.Config) error {
 		if err := rpc.Run(); err != nil {
 			errCH <- fmt.Errorf("Error serving rpc: %s", err)
 		}
+		errCH <- nil
 	}()
 	go func() {
 		if err := wb.Run(); err != nil {
 			errCH <- fmt.Errorf("Error serving web: %s", err)
 		}
+		errCH <- nil
 	}()
 	return <-errCH
 }
