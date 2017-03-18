@@ -14,15 +14,38 @@ func TestServer_NewImage(t *testing.T) {
 	setUp(t)
 	defer tearDown(t)
 	type NewImageTC struct {
-		Desc    string
-		Auther  *TokenValidatorMock
-		Model   *ModelMock
-		Req     *image.NewImageRequest
-		ExpResp *image.NewImageResponse
+		Desc            string
+		Auther          *TokenValidatorMock
+		Model           *ModelMock
+		Req             *image.NewImageRequest
+		ExpResp         *image.NewImageResponse
+		ExpBase64Method bool
+		ExpBytesMethod  bool
 	}
 	tcs := []NewImageTC{
 		{
-			Desc: "Successfull image save",
+			Desc: "Successfull []byte image save",
+			Auther: &TokenValidatorMock{
+				ExpIsClErr: false,
+				ExpValErr: nil,
+			},
+			Model: &ModelMock{
+				ExpImURL: "protocol://some.img.uri",
+				ExpNewImErr: nil,
+				ExpIsClErr: false,
+				ExpUnauthorized: false,
+			},
+			Req: &image.NewImageRequest{Image:make([]byte, 0)},
+			ExpResp: &image.NewImageResponse{
+				Code: http.StatusCreated,
+				Detail: "",
+				ImageURL: "protocol://some.img.uri",
+				Id: srvID,
+			},
+			ExpBytesMethod: true,
+		},
+		{
+			Desc: "Successfull base64 encoded image save",
 			Auther: &TokenValidatorMock{
 				ExpIsClErr: false,
 				ExpValErr: nil,
@@ -40,6 +63,7 @@ func TestServer_NewImage(t *testing.T) {
 				ImageURL: "protocol://some.img.uri",
 				Id: srvID,
 			},
+			ExpBase64Method: true,
 		},
 		{
 			Desc: "invalid token",
@@ -86,6 +110,7 @@ func TestServer_NewImage(t *testing.T) {
 				Detail: "unauthorized",
 				Id: srvID,
 			},
+			ExpBase64Method: true,
 		},
 		{
 			Desc: "Model declare bad request",
@@ -105,6 +130,7 @@ func TestServer_NewImage(t *testing.T) {
 				Detail: "bad request",
 				Id: srvID,
 			},
+			ExpBase64Method: true,
 		},
 		{
 			Desc: "Model error",
@@ -123,6 +149,7 @@ func TestServer_NewImage(t *testing.T) {
 				Detail: server.SomethingWickedError,
 				Id: srvID,
 			},
+			ExpBase64Method: true,
 		},
 	}
 	for _, tc := range tcs {
@@ -142,6 +169,18 @@ func TestServer_NewImage(t *testing.T) {
 		if !reflect.DeepEqual(tc.ExpResp, resp) {
 			t.Errorf("%s - Respnse mismatch:\nExpect:\t%+v\nGot:\t%+v",
 				tc.Desc, tc.ExpResp, resp)
+		}
+		if tc.ExpBase64Method && !tc.Model.RecordNewBase64ImageCalled {
+			t.Errorf("%s - model.NewBase64Image() was not called", tc.Desc)
+		}
+		if !tc.ExpBase64Method && tc.Model.RecordNewBase64ImageCalled {
+			t.Errorf("%s - model.NewBase64Image() was called unexpectedly", tc.Desc)
+		}
+		if tc.ExpBytesMethod && !tc.Model.RecordNewImageCalled {
+			t.Errorf("%s - model.RecordNewImageCalled() was not called", tc.Desc)
+		}
+		if !tc.ExpBytesMethod && tc.Model.RecordNewImageCalled {
+			t.Errorf("%s - model.RecordNewImageCalled() was called unexpectedly", tc.Desc)
 		}
 	}
 }

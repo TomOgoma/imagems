@@ -36,13 +36,20 @@ func (t *TokenValidatorMock) IsClientError(error) bool {
 }
 
 type ModelMock struct {
-	ExpImURL        string
-	ExpNewImErr     error
-	ExpUnauthorized bool
-	ExpIsClErr      bool
+	ExpImURL                   string
+	ExpNewImErr                error
+	ExpUnauthorized            bool
+	ExpIsClErr                 bool
+	RecordNewBase64ImageCalled bool
+	RecordNewImageCalled       bool
 }
 
 func (m *ModelMock) NewImage(*token.Token, []byte) (string, string, error) {
+	m.RecordNewImageCalled = true
+	return srvTm, m.ExpImURL, m.ExpNewImErr
+}
+func (m *ModelMock) NewBase64Image(*token.Token, string) (string, string, error) {
+	m.RecordNewBase64ImageCalled = true
 	return srvTm, m.ExpImURL, m.ExpNewImErr
 }
 func (m *ModelMock) IsAuthError(error) bool {

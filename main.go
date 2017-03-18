@@ -42,10 +42,10 @@ func (sc ServiceConfig) ImagesDir() string {
 }
 
 func (sc ServiceConfig) ImgURLRoot() string {
-	if strings.HasPrefix(sc.ImgURL, "/") {
-		return sc.ImgURL
+	if strings.HasSuffix(sc.ImgURL, "/") {
+		return sc.ImgURL + name
 	}
-	return sc.ImgURL + "/"
+	return sc.ImgURL + "/" + name
 }
 
 func (sc ServiceConfig) ID() string {

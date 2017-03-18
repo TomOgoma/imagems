@@ -9,6 +9,7 @@ import (
 )
 
 type Model interface {
+	NewBase64Image(*token.Token, string) (string, string, error)
 	NewImage(*token.Token, []byte) (string, string, error)
 	IsAuthError(error) bool
 	IsClientError(error) bool
@@ -28,7 +29,12 @@ func (s *Server) NewImage(c context.Context, req *image.NewImageRequest, resp *i
 		s.log.Error("%d - Failed to validate user token: %s", tID, err)
 		return nil
 	}
-	st, url, err := s.model.NewImage(tkn, req.Image)
+	var imgURL string
+	if req.Image == nil {
+		st, imgURL, err = s.model.NewBase64Image(tkn, req.GetImageB64())
+	} else {
+		st, imgURL, err = s.model.NewImage(tkn, req.GetImage())
+	}
 	if err != nil {
 		if s.model.IsAuthError(err) {
 			s.errorImageResponse(http.StatusUnauthorized, err.Error(), st, resp)
@@ -43,7 +49,7 @@ func (s *Server) NewImage(c context.Context, req *image.NewImageRequest, resp *i
 		return nil
 	}
 	resp.Code = http.StatusCreated
-	resp.ImageURL = url
+	resp.ImageURL = imgURL
 	resp.Id = s.id
 	resp.ServerTime = st
 	return nil

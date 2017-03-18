@@ -20,8 +20,8 @@ service:
 
   # imgURL is the base URL assigned to the micro-service for the purpose of
   # serving images. This is generally the address at which `micro web` listens
-  # at with the `imagems` suffix
-  imgURL: :8082/imagems
+  # at.
+  imgURL: :8082
 
 # auth configures authentication/authorization values.
 auth:

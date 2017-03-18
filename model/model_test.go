@@ -7,6 +7,8 @@ import (
 	"github.com/tomogoma/go-commons/auth/token"
 	"errors"
 	"io/ioutil"
+	"encoding/base64"
+	"path"
 )
 
 type ConfigMock struct {
@@ -111,16 +113,17 @@ func TestNew_nilFileWriter(t *testing.T) {
 func TestModel_NewImage(t *testing.T) {
 	defer tearDown(t)
 	type NewImageTestCase struct {
-		Desc                string
-		DB                  *DBMock
-		FW                  *FileWriterMock
-		Token               *token.Token
-		Image               []byte
-		ExpImgURLPrefix     string
-		ExpWriteFPathPrefix string
-		ExpErr              bool
-		ExpIsClErr          bool
-		ExpUnauthorized     bool
+		Desc            string
+		DB              *DBMock
+		FW              *FileWriterMock
+		Token           *token.Token
+		Image           []byte
+		ExpImgURL       string
+		ExpWriteFPath   string
+		ExpErr          bool
+		ExpIsClErr      bool
+		ExpUnauthorized bool
+		ExpDirCreated   bool
 	}
 	img1, err := ioutil.ReadFile("png_sample.png")
 	if err != nil {
@@ -133,11 +136,12 @@ func TestModel_NewImage(t *testing.T) {
 			FW: &FileWriterMock{ExpErr: nil},
 			Token: &token.Token{UsrID: 123},
 			Image: img1,
-			ExpImgURLPrefix: imgsURLRoot + "123/456.png",
-			ExpWriteFPathPrefix: imgsDir + "123/456.png",
+			ExpImgURL: imgsURLRoot + "123/456.png",
+			ExpWriteFPath: imgsDir + "123/456.png",
 			ExpErr: false,
 			ExpIsClErr: false,
 			ExpUnauthorized: false,
+			ExpDirCreated: true,
 		},
 		{
 			Desc: "Nil image",
@@ -185,8 +189,8 @@ func TestModel_NewImage(t *testing.T) {
 			FW: &FileWriterMock{ExpErr: nil},
 			Token: &token.Token{UsrID: 123},
 			Image: img1,
-			ExpImgURLPrefix: imgsURLRoot + "/123/",
-			ExpWriteFPathPrefix: imgsDir + "/123/",
+			ExpImgURL: imgsURLRoot + "/123/",
+			ExpWriteFPath: imgsDir + "/123/",
 			ExpErr: true,
 			ExpIsClErr: false,
 			ExpUnauthorized: false,
@@ -208,6 +212,109 @@ func TestModel_NewImage(t *testing.T) {
 			t.Fatalf("%s - model.New(): %v", tc.Desc, err)
 		}
 		st, imgURL, err := m.NewImage(tc.Token, tc.Image)
+		if st == "" {
+			t.Errorf("%s - server time was empty", tc.Desc)
+		}
+		if tc.ExpErr {
+			if err == nil {
+				t.Errorf("%s - expected an error but got nil", tc.Desc)
+				continue
+			}
+			if tc.ExpIsClErr && !m.IsClientError(err) {
+				t.Errorf("%s - expected client error but got %v", tc.Desc, err)
+			}
+			if !tc.ExpIsClErr && m.IsClientError(err) {
+				t.Errorf("%s - expected non-client error but got %v", tc.Desc, err)
+			}
+			if tc.ExpUnauthorized && !m.IsAuthError(err) {
+				t.Errorf("%s - expected unauthorized error but got %v", tc.Desc, err)
+			}
+			if !tc.ExpUnauthorized && m.IsAuthError(err) {
+				t.Errorf("%s - expected non-unauthorized error but got %v", tc.Desc, err)
+			}
+			if tc.FW.ExpErr != nil && !tc.DB.RecordMetaDeld {
+				t.Errorf("%s - expected meta rollback on file save error", tc.Desc)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("%s - model.NewImage(): %v", tc.Desc, err)
+		}
+		if imgURL != tc.ExpImgURL {
+			t.Errorf("%s - image URL mismatch: expect '%s', got '%s'", tc.Desc, tc.ExpImgURL, imgURL)
+		}
+		if !tc.DB.RecordMetaSaved {
+			t.Errorf("%s - DB did not record meta saving", tc.Desc)
+		}
+		if tc.FW.RecordWriteFilePath != tc.ExpWriteFPath {
+			t.Errorf("%s - Expected write to file at '%s', got '%s'",
+				tc.Desc, tc.ExpWriteFPath, tc.FW.RecordWriteFilePath)
+		}
+		if _, err := os.Stat(path.Dir(tc.ExpWriteFPath)); tc.ExpDirCreated && err != nil {
+			t.Errorf("%s - Expected parent directory to be created" +
+				" but: %v", tc.Desc, err)
+		}
+	}
+}
+
+func TestModel_NewBase64Image(t *testing.T) {
+	defer tearDown(t)
+	type NewImageTestCase struct {
+		Desc                string
+		DB                  *DBMock
+		FW                  *FileWriterMock
+		Token               *token.Token
+		Image               string
+		ExpImgURLPrefix     string
+		ExpWriteFPathPrefix string
+		ExpErr              bool
+		ExpIsClErr          bool
+		ExpUnauthorized     bool
+	}
+	img1, err := ioutil.ReadFile("png_sample.png")
+	if err != nil {
+		t.Fatalf("Failed to set up (read test image file): %v", err)
+	}
+	tcs := []NewImageTestCase{
+		{
+			Desc: "Successful save png",
+			DB: &DBMock{ExpDelErr:nil, ExpSaveErr:nil, ExpMetaID:456},
+			FW: &FileWriterMock{ExpErr: nil},
+			Token: &token.Token{UsrID: 123},
+			Image: base64.StdEncoding.EncodeToString(img1),
+			ExpImgURLPrefix: imgsURLRoot + "123/456.png",
+			ExpWriteFPathPrefix: imgsDir + "123/456.png",
+			ExpErr: false,
+			ExpIsClErr: false,
+			ExpUnauthorized: false,
+		},
+		{
+			Desc: "Empty image",
+			DB: &DBMock{},
+			FW: &FileWriterMock{ExpErr: nil},
+			Token: &token.Token{UsrID: 123},
+			Image: "",
+			ExpErr: true,
+			ExpIsClErr: true,
+			ExpUnauthorized: false,
+		},
+		{
+			Desc: "Invalid base64 encoding",
+			DB: &DBMock{},
+			FW: &FileWriterMock{ExpErr: nil},
+			Token: &token.Token{UsrID: 123},
+			Image: "aGV%sb-G8sIHdvcmxkIQ", // note the '%' in the string
+			ExpErr: true,
+			ExpIsClErr: true,
+			ExpUnauthorized: false,
+		},
+	}
+	for _, tc := range tcs {
+		m, err := model.New(validConf, tc.DB, tc.FW)
+		if err != nil {
+			t.Fatalf("%s - model.New(): %v", tc.Desc, err)
+		}
+		st, imgURL, err := m.NewBase64Image(tc.Token, tc.Image)
 		if st == "" {
 			t.Errorf("%s - server time was empty", tc.Desc)
 		}

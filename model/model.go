@@ -15,6 +15,9 @@ import (
 	_ "image/png"
 	"net/http"
 	"fmt"
+	"encoding/base64"
+	"strings"
+	"io/ioutil"
 )
 
 type ImageMeta struct {
@@ -78,37 +81,62 @@ func (m *Model) NewImage(t *token.Token, img []byte) (string, string, error) {
 	if img == nil {
 		return st, "", errors.NewClient("empty image provided")
 	}
+	imgURL, err := m.saveImage(int64(t.UsrID), img)
+	return st, imgURL, err
+}
+
+func (m *Model) NewBase64Image(t *token.Token, imgStr string) (string, string, error) {
+	st := time.Now().Format(timeFormat)
+	if t == nil {
+		return st, "", errors.New("token was nil")
+	}
+	if imgStr == "" {
+		return st, "", errors.NewClient("empty image provided")
+	}
+	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(imgStr))
+	imgB, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return st, "", errors.NewClient("unable to decode image content")
+	}
+	imgURL, err := m.saveImage(int64(t.UsrID), imgB)
+	return st, imgURL, err
+}
+
+func (m *Model) saveImage(userID int64, img []byte) (string, error) {
 	conf, ext, err := image.DecodeConfig(bytes.NewReader(img))
 	if err != nil {
 		ext = "bmp"
 		if !isBitmap(img) {
-			return st, "", errors.NewClient("unsuported image type")
+			return "", errors.NewClient("unsuported image type")
 		}
 	}
 	mime := http.DetectContentType(img)
 	meta := &ImageMeta{
-		UserID: int64(t.UsrID),
+		UserID: userID,
 		Type: ext,
 		MimeType: mime,
 		Width: conf.Width,
 		Height: conf.Height,
 	}
 	if err := m.db.SaveMeta(meta); err != nil {
-		return st, "", errors.Newf("error saving image meta: %v", err)
+		return "", errors.Newf("error saving image meta: %v", err)
 	}
 	fName := strconv.FormatInt(meta.ID, 10) + "." + ext
-	pathSuffix := path.Join(strconv.Itoa(t.UsrID), fName)
+	pathSuffix := path.Join(strconv.FormatInt(userID, 10), fName)
 	fPath := path.Join(m.imgsDir, pathSuffix)
+	if err := os.MkdirAll(path.Dir(fPath), 0755); err != nil {
+		return "", errors.Newf("error creating image dest dir: %v", err)
+	}
 	if err := m.fw.WriteFile(fPath, img, 0644); err != nil {
 		rollBackErr := m.db.DeleteMeta(meta.ID)
 		if rollBackErr != nil {
 			err = fmt.Errorf("%v ...further while undoing db changes: %v", err, rollBackErr)
 		}
-		return st, "", errors.Newf("error saving image to file: %v", err)
+		return "", errors.Newf("error saving image to file: %v", err)
 	}
 	URL := *m.imgURL
 	URL.Path = path.Join(URL.Path, pathSuffix)
-	return st, URL.String(), nil
+	return URL.String(), nil
 }
 
 func validateConfig(c Config) error {
@@ -124,8 +152,8 @@ func validateConfig(c Config) error {
 	return nil
 }
 
-//getFormat gets the format of an image file
-//http://openmymind.net/Getting-An-Images-Type-And-Size/
+// isBitmap returns true if the first 2 bytes of an image denote that it is a bitmap image.
+// More at http://openmymind.net/Getting-An-Images-Type-And-Size/
 func isBitmap(first2B []byte) bool {
 	return len(first2B) > 1 && first2B[0] == 0x42 && first2B[1] == 0x4D
 }
