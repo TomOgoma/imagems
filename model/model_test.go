@@ -87,10 +87,34 @@ func TestNew_emptyImagesDir(t *testing.T) {
 }
 
 func TestNew_invalidURLRoot(t *testing.T) {
+	type InvalidURLRootTestCase struct {
+		Desc       string
+		ImgURLRoot string
+	}
+	tcs := []InvalidURLRootTestCase{
+		{
+			Desc: "empty url",
+			ImgURLRoot: "",
+		},
+		{
+			Desc: "ambiguous ':'",
+			ImgURLRoot: ":",
+		},
+		{
+			Desc: "missing protocol",
+			ImgURLRoot: "192.168.1.2:8082/",
+		},
+	}
 	defer tearDown(t)
-	_, err := model.New(&ConfigMock{ExpImgsDir: imgsDir, ExpImgURLRoot: ":"}, &DBMock{}, &FileWriterMock{})// Missing protocol
-	if err == nil {
-		t.Fatal("Expected an error but got nil")
+	for _, tc := range tcs {
+		confMock := &ConfigMock{
+			ExpImgsDir: imgsDir,
+			ExpImgURLRoot: tc.ImgURLRoot,
+		}
+		_, err := model.New(confMock, &DBMock{}, &FileWriterMock{})
+		if err == nil {
+			t.Errorf("%s - Expected an error but got nil", tc.Desc)
+		}
 	}
 }
 

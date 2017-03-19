@@ -146,8 +146,12 @@ func validateConfig(c Config) error {
 	if err := os.MkdirAll(c.ImagesDir(), 0755); err != nil {
 		return errors.Newf("bad image directory provided: %v", err)
 	}
-	if _, err := url.Parse(c.ImgURLRoot()); err != nil {
+	urlRoot, err := url.Parse(c.ImgURLRoot())
+	if err != nil {
 		return errors.Newf("image URL root was invalid: %v", err)
+	}
+	if urlRoot.Scheme == "" {
+		return errors.Newf("image URL root was missing the protocol/scheme e.g http://")
 	}
 	return nil
 }

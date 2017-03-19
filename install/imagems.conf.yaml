@@ -19,7 +19,9 @@ service:
   dataDir: /var/data/imagems
 
   # imgURL is the publicly accessible URL that the load balancer accepts requests
-  # from - typically the URL which `micro web` is listening on.
+  # from.
+  # - typically the URL which `micro web` is listening on.
+  # - the URL must be complete i.e. protocol://host
   # e.g. http://localhost:8082
   imgURL: :8082
 
