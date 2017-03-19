@@ -18,9 +18,9 @@ service:
   # dataDir is the /path/to/directory holding all state files for the micro-service
   dataDir: /var/data/imagems
 
-  # imgURL is the base URL assigned to the micro-service for the purpose of
-  # serving images. This is generally the address at which `micro web` listens
-  # at.
+  # imgURL is the publicly accessible URL that the load balancer accepts requests
+  # from - typically the URL which `micro web` is listening on.
+  # e.g. http://localhost:8082
   imgURL: :8082
 
 # auth configures authentication/authorization values.

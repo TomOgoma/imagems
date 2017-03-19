@@ -8,18 +8,17 @@ import (
 	"github.com/limetext/log4go"
 	"github.com/micro/go-micro"
 	"github.com/tomogoma/imagems/server"
-	"github.com/tomogoma/imagems/server/proto"
 	"github.com/tomogoma/go-commons/auth/token"
 	confhelper "github.com/tomogoma/go-commons/config"
 	"github.com/tomogoma/imagems/config"
 	"github.com/micro/go-web"
-	"github.com/gorilla/mux"
 	"path"
 	"github.com/tomogoma/imagems/model"
 	"github.com/tomogoma/imagems/db"
 	"os"
 	"io/ioutil"
 	"strings"
+	"github.com/tomogoma/imagems/server/proto"
 )
 
 type Logger interface {
@@ -111,9 +110,7 @@ func bootstrap(log Logger, conf config.Config) error {
 		web.Version(version),
 		web.RegisterInterval(conf.Service.RegisterInterval),
 	)
-	r := mux.NewRouter()
-	srv.HandleRoute(r)
-	wb.Handle("/", r)
+	wb.Handle("/", srv.NewHttpHandler())
 	errCH := make(chan error)
 	go func() {
 		if err := rpc.Run(); err != nil {

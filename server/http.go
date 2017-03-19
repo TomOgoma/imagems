@@ -1,13 +1,15 @@
 package server
 
 import (
-	"github.com/gorilla/mux"
 	"net/http"
+	"github.com/gorilla/mux"
 )
 
-func (s *Server) HandleRoute(r *mux.Router) {
+func (s *Server) NewHttpHandler() http.Handler {
+	r := mux.NewRouter()
 	r.HandleFunc("/status", statusHandler)
-	r.Handle("/", http.FileServer(http.Dir(s.imgsDir))).Methods("GET")
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir(s.imgsDir))).Methods("GET")
+	return r
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
