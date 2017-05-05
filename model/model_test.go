@@ -4,11 +4,11 @@ import (
 	"testing"
 	"github.com/tomogoma/imagems/model"
 	"os"
-	"github.com/tomogoma/go-commons/auth/token"
 	"errors"
 	"io/ioutil"
 	"encoding/base64"
 	"path"
+	"github.com/tomogoma/authms/claim"
 )
 
 type ConfigMock struct {
@@ -57,7 +57,7 @@ func (f *FileWriterMock) WriteFile(fPath string, data []byte, perm os.FileMode) 
 const imgsDir = "test/images/"
 const imgsURLRoot = "localhost://8080/imagems_test/images/"
 
-var validConf = &ConfigMock{ExpImgsDir:imgsDir, ExpImgURLRoot: imgsURLRoot}
+var validConf = &ConfigMock{ExpImgsDir: imgsDir, ExpImgURLRoot: imgsURLRoot}
 
 func TestNew(t *testing.T) {
 	defer tearDown(t)
@@ -93,22 +93,22 @@ func TestNew_invalidURLRoot(t *testing.T) {
 	}
 	tcs := []InvalidURLRootTestCase{
 		{
-			Desc: "empty url",
+			Desc:       "empty url",
 			ImgURLRoot: "",
 		},
 		{
-			Desc: "ambiguous ':'",
+			Desc:       "ambiguous ':'",
 			ImgURLRoot: ":",
 		},
 		{
-			Desc: "missing protocol",
+			Desc:       "missing protocol",
 			ImgURLRoot: "192.168.1.2:8082/",
 		},
 	}
 	defer tearDown(t)
 	for _, tc := range tcs {
 		confMock := &ConfigMock{
-			ExpImgsDir: imgsDir,
+			ExpImgsDir:    imgsDir,
 			ExpImgURLRoot: tc.ImgURLRoot,
 		}
 		_, err := model.New(confMock, &DBMock{}, &FileWriterMock{})
@@ -140,7 +140,7 @@ func TestModel_NewImage(t *testing.T) {
 		Desc            string
 		DB              *DBMock
 		FW              *FileWriterMock
-		Token           *token.Token
+		Token           claim.Auth
 		Image           []byte
 		ExpImgURL       string
 		ExpWriteFPath   string
@@ -155,78 +155,78 @@ func TestModel_NewImage(t *testing.T) {
 	}
 	tcs := []NewImageTestCase{
 		{
-			Desc: "Successful save png",
-			DB: &DBMock{ExpDelErr:nil, ExpSaveErr:nil, ExpMetaID:456},
-			FW: &FileWriterMock{ExpErr: nil},
-			Token: &token.Token{UsrID: 123},
-			Image: img1,
-			ExpImgURL: imgsURLRoot + "123/456.png",
-			ExpWriteFPath: imgsDir + "123/456.png",
-			ExpErr: false,
-			ExpIsClErr: false,
+			Desc:            "Successful save png",
+			DB:              &DBMock{ExpDelErr: nil, ExpSaveErr: nil, ExpMetaID: 456},
+			FW:              &FileWriterMock{ExpErr: nil},
+			Token:           claim.Auth{UsrID: 123},
+			Image:           img1,
+			ExpImgURL:       imgsURLRoot + "123/456.png",
+			ExpWriteFPath:   imgsDir + "123/456.png",
+			ExpErr:          false,
+			ExpIsClErr:      false,
 			ExpUnauthorized: false,
-			ExpDirCreated: true,
+			ExpDirCreated:   true,
 		},
 		{
-			Desc: "Nil image",
-			DB: &DBMock{},
-			FW: &FileWriterMock{ExpErr: nil},
-			Token: &token.Token{UsrID: 123},
-			Image: nil,
-			ExpErr: true,
-			ExpIsClErr: true,
-			ExpUnauthorized: false,
-		},
-		{
-			Desc: "Invalid image",
-			DB: &DBMock{},
-			FW: &FileWriterMock{ExpErr: nil},
-			Token: &token.Token{UsrID: 123},
-			Image: []byte{0, 100},
-			ExpErr: true,
-			ExpIsClErr: true,
+			Desc:            "Nil image",
+			DB:              &DBMock{},
+			FW:              &FileWriterMock{ExpErr: nil},
+			Token:           claim.Auth{UsrID: 123},
+			Image:           nil,
+			ExpErr:          true,
+			ExpIsClErr:      true,
 			ExpUnauthorized: false,
 		},
 		{
-			Desc: "Image size 1byte",
-			DB: &DBMock{},
-			FW: &FileWriterMock{ExpErr: nil},
-			Token: &token.Token{UsrID: 123},
-			Image: []byte{100},
-			ExpErr: true,
-			ExpIsClErr: true,
+			Desc:            "Invalid image",
+			DB:              &DBMock{},
+			FW:              &FileWriterMock{ExpErr: nil},
+			Token:           claim.Auth{UsrID: 123},
+			Image:           []byte{0, 100},
+			ExpErr:          true,
+			ExpIsClErr:      true,
 			ExpUnauthorized: false,
 		},
 		{
-			Desc: "Image size 0bytes",
-			DB: &DBMock{},
-			FW: &FileWriterMock{ExpErr: nil},
-			Token: &token.Token{UsrID: 123},
-			Image: []byte{},
-			ExpErr: true,
-			ExpIsClErr: true,
+			Desc:            "Image size 1byte",
+			DB:              &DBMock{},
+			FW:              &FileWriterMock{ExpErr: nil},
+			Token:           claim.Auth{UsrID: 123},
+			Image:           []byte{100},
+			ExpErr:          true,
+			ExpIsClErr:      true,
 			ExpUnauthorized: false,
 		},
 		{
-			Desc: "DB report error",
-			DB: &DBMock{ExpSaveErr: errors.New("some internal error")},
-			FW: &FileWriterMock{ExpErr: nil},
-			Token: &token.Token{UsrID: 123},
-			Image: img1,
-			ExpImgURL: imgsURLRoot + "/123/",
-			ExpWriteFPath: imgsDir + "/123/",
-			ExpErr: true,
-			ExpIsClErr: false,
+			Desc:            "Image size 0bytes",
+			DB:              &DBMock{},
+			FW:              &FileWriterMock{ExpErr: nil},
+			Token:           claim.Auth{UsrID: 123},
+			Image:           []byte{},
+			ExpErr:          true,
+			ExpIsClErr:      true,
 			ExpUnauthorized: false,
 		},
 		{
-			Desc: "FileWriter report error",
-			DB: &DBMock{ExpDelErr:nil, ExpSaveErr:nil, ExpMetaID:456},
-			FW: &FileWriterMock{ExpErr: errors.New("Some error")},
-			Token: &token.Token{UsrID: 123},
-			Image: img1,
-			ExpErr: true,
-			ExpIsClErr: false,
+			Desc:            "DB report error",
+			DB:              &DBMock{ExpSaveErr: errors.New("some internal error")},
+			FW:              &FileWriterMock{ExpErr: nil},
+			Token:           claim.Auth{UsrID: 123},
+			Image:           img1,
+			ExpImgURL:       imgsURLRoot + "/123/",
+			ExpWriteFPath:   imgsDir + "/123/",
+			ExpErr:          true,
+			ExpIsClErr:      false,
+			ExpUnauthorized: false,
+		},
+		{
+			Desc:            "FileWriter report error",
+			DB:              &DBMock{ExpDelErr: nil, ExpSaveErr: nil, ExpMetaID: 456},
+			FW:              &FileWriterMock{ExpErr: errors.New("Some error")},
+			Token:           claim.Auth{UsrID: 123},
+			Image:           img1,
+			ExpErr:          true,
+			ExpIsClErr:      false,
 			ExpUnauthorized: false,
 		},
 	}
@@ -275,7 +275,7 @@ func TestModel_NewImage(t *testing.T) {
 				tc.Desc, tc.ExpWriteFPath, tc.FW.RecordWriteFilePath)
 		}
 		if _, err := os.Stat(path.Dir(tc.ExpWriteFPath)); tc.ExpDirCreated && err != nil {
-			t.Errorf("%s - Expected parent directory to be created" +
+			t.Errorf("%s - Expected parent directory to be created"+
 				" but: %v", tc.Desc, err)
 		}
 	}
@@ -287,7 +287,7 @@ func TestModel_NewBase64Image(t *testing.T) {
 		Desc                string
 		DB                  *DBMock
 		FW                  *FileWriterMock
-		Token               *token.Token
+		Token claim.Auth
 		Image               string
 		ExpImgURLPrefix     string
 		ExpWriteFPathPrefix string
@@ -301,35 +301,35 @@ func TestModel_NewBase64Image(t *testing.T) {
 	}
 	tcs := []NewImageTestCase{
 		{
-			Desc: "Successful save png",
-			DB: &DBMock{ExpDelErr:nil, ExpSaveErr:nil, ExpMetaID:456},
-			FW: &FileWriterMock{ExpErr: nil},
-			Token: &token.Token{UsrID: 123},
-			Image: base64.StdEncoding.EncodeToString(img1),
-			ExpImgURLPrefix: imgsURLRoot + "123/456.png",
+			Desc:                "Successful save png",
+			DB:                  &DBMock{ExpDelErr: nil, ExpSaveErr: nil, ExpMetaID: 456},
+			FW:                  &FileWriterMock{ExpErr: nil},
+			Token:               claim.Auth{UsrID: 123},
+			Image:               base64.StdEncoding.EncodeToString(img1),
+			ExpImgURLPrefix:     imgsURLRoot + "123/456.png",
 			ExpWriteFPathPrefix: imgsDir + "123/456.png",
-			ExpErr: false,
-			ExpIsClErr: false,
+			ExpErr:              false,
+			ExpIsClErr:          false,
+			ExpUnauthorized:     false,
+		},
+		{
+			Desc:            "Empty image",
+			DB:              &DBMock{},
+			FW:              &FileWriterMock{ExpErr: nil},
+			Token:           claim.Auth{UsrID: 123},
+			Image:           "",
+			ExpErr:          true,
+			ExpIsClErr:      true,
 			ExpUnauthorized: false,
 		},
 		{
-			Desc: "Empty image",
-			DB: &DBMock{},
-			FW: &FileWriterMock{ExpErr: nil},
-			Token: &token.Token{UsrID: 123},
-			Image: "",
-			ExpErr: true,
-			ExpIsClErr: true,
-			ExpUnauthorized: false,
-		},
-		{
-			Desc: "Invalid base64 encoding",
-			DB: &DBMock{},
-			FW: &FileWriterMock{ExpErr: nil},
-			Token: &token.Token{UsrID: 123},
-			Image: "aGV%sb-G8sIHdvcmxkIQ", // note the '%' in the string
-			ExpErr: true,
-			ExpIsClErr: true,
+			Desc:            "Invalid base64 encoding",
+			DB:              &DBMock{},
+			FW:              &FileWriterMock{ExpErr: nil},
+			Token:           claim.Auth{UsrID: 123},
+			Image:           "aGV%sb-G8sIHdvcmxkIQ", // note the '%' in the string
+			ExpErr:          true,
+			ExpIsClErr:      true,
 			ExpUnauthorized: false,
 		},
 	}

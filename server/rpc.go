@@ -4,13 +4,13 @@ import (
 	"golang.org/x/net/context"
 	"github.com/tomogoma/imagems/server/proto"
 	"net/http"
-	"github.com/tomogoma/go-commons/auth/token"
 	"time"
+	"github.com/tomogoma/authms/claim"
 )
 
 type Model interface {
-	NewBase64Image(*token.Token, string) (string, string, error)
-	NewImage(*token.Token, []byte) (string, string, error)
+	NewBase64Image(claim.Auth, string) (string, string, error)
+	NewImage(claim.Auth, []byte) (string, string, error)
 	IsAuthError(error) bool
 	IsClientError(error) bool
 }
@@ -19,9 +19,10 @@ func (s *Server) NewImage(c context.Context, req *image.NewImageRequest, resp *i
 	tID := <-s.tIDCh
 	s.log.Info("%d - New image request", tID)
 	st := time.Now().Format(timeFormat)
-	tkn, err := s.token.Validate(req.Token);
+	clm := claim.Auth{}
+	_, err := s.token.Validate(req.Token, &clm)
 	if err != nil {
-		if s.token.IsClientError(err) {
+		if s.token.IsAuthError(err) {
 			s.errorImageResponse(http.StatusUnauthorized, err.Error(), st, resp)
 			return nil
 		}
@@ -31,9 +32,9 @@ func (s *Server) NewImage(c context.Context, req *image.NewImageRequest, resp *i
 	}
 	var imgURL string
 	if req.Image == nil {
-		st, imgURL, err = s.model.NewBase64Image(tkn, req.GetImageB64())
+		st, imgURL, err = s.model.NewBase64Image(clm, req.GetImageB64())
 	} else {
-		st, imgURL, err = s.model.NewImage(tkn, req.GetImage())
+		st, imgURL, err = s.model.NewImage(clm, req.GetImage())
 	}
 	if err != nil {
 		if s.model.IsAuthError(err) {

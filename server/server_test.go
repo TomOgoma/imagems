@@ -2,11 +2,12 @@ package server_test
 
 import (
 	"testing"
-	"github.com/tomogoma/go-commons/auth/token"
 	"github.com/tomogoma/imagems/server"
 	"github.com/limetext/log4go"
 	"time"
 	"os"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/tomogoma/authms/claim"
 )
 
 type ConfigMock struct {
@@ -22,16 +23,16 @@ func (c *ConfigMock) ID() string {
 }
 
 type TokenValidatorMock struct {
-	ExpToken   *token.Token
+	ExpToken   *jwt.Token
 	ExpValErr  error
 	ExpIsClErr bool
 }
 
-func (t *TokenValidatorMock) Validate(token string) (*token.Token, error) {
+func (t *TokenValidatorMock) Validate(token string, clm jwt.Claims) (*jwt.Token, error) {
 	return t.ExpToken, t.ExpValErr
 }
 
-func (t *TokenValidatorMock) IsClientError(error) bool {
+func (t *TokenValidatorMock) IsAuthError(error) bool {
 	return t.ExpIsClErr
 }
 
@@ -44,11 +45,11 @@ type ModelMock struct {
 	RecordNewImageCalled       bool
 }
 
-func (m *ModelMock) NewImage(*token.Token, []byte) (string, string, error) {
+func (m *ModelMock) NewImage(claim.Auth, []byte) (string, string, error) {
 	m.RecordNewImageCalled = true
 	return srvTm, m.ExpImURL, m.ExpNewImErr
 }
-func (m *ModelMock) NewBase64Image(*token.Token, string) (string, string, error) {
+func (m *ModelMock) NewBase64Image(claim.Auth, string) (string, string, error) {
 	m.RecordNewBase64ImageCalled = true
 	return srvTm, m.ExpImURL, m.ExpNewImErr
 }
@@ -110,7 +111,7 @@ func TestNew_NonExistImgDir(t *testing.T) {
 func TestNew_uncreateableDir(t *testing.T) {
 	setUp(t)
 	defer tearDown(t)
-	_, err := server.New(&ConfigMock{ExpImDir:"/tmp/imagems_test"}, &TokenValidatorMock{}, &ModelMock{}, logger)
+	_, err := server.New(&ConfigMock{ExpImDir: "/tmp/imagems_test"}, &TokenValidatorMock{}, &ModelMock{}, logger)
 	if err == nil {
 		t.Fatal("Expected an error but got nil")
 	}

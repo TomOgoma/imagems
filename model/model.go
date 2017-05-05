@@ -2,7 +2,6 @@ package model
 
 import (
 	"os"
-	"github.com/tomogoma/go-commons/auth/token"
 	"time"
 	"github.com/tomogoma/go-commons/errors"
 	"image"
@@ -18,6 +17,7 @@ import (
 	"encoding/base64"
 	"strings"
 	"io/ioutil"
+	"github.com/tomogoma/authms/claim"
 )
 
 type ImageMeta struct {
@@ -73,23 +73,17 @@ func New(c Config, db DB, fw FileWriter) (*Model, error) {
 	return &Model{imgsDir: c.ImagesDir(), imgURL: imgURLRoot, db: db, fw: fw}, nil
 }
 
-func (m *Model) NewImage(t *token.Token, img []byte) (string, string, error) {
+func (m *Model) NewImage(t claim.Auth, img []byte) (string, string, error) {
 	st := time.Now().Format(timeFormat)
-	if t == nil {
-		return st, "", errors.New("token was nil")
-	}
 	if img == nil {
 		return st, "", errors.NewClient("empty image provided")
 	}
-	imgURL, err := m.saveImage(int64(t.UsrID), img)
+	imgURL, err := m.saveImage(t.UsrID, img)
 	return st, imgURL, err
 }
 
-func (m *Model) NewBase64Image(t *token.Token, imgStr string) (string, string, error) {
+func (m *Model) NewBase64Image(t claim.Auth, imgStr string) (string, string, error) {
 	st := time.Now().Format(timeFormat)
-	if t == nil {
-		return st, "", errors.New("token was nil")
-	}
 	if imgStr == "" {
 		return st, "", errors.NewClient("empty image provided")
 	}
@@ -98,7 +92,7 @@ func (m *Model) NewBase64Image(t *token.Token, imgStr string) (string, string, e
 	if err != nil {
 		return st, "", errors.NewClient("unable to decode image content")
 	}
-	imgURL, err := m.saveImage(int64(t.UsrID), imgB)
+	imgURL, err := m.saveImage(t.UsrID, imgB)
 	return st, imgURL, err
 }
 
@@ -112,11 +106,11 @@ func (m *Model) saveImage(userID int64, img []byte) (string, error) {
 	}
 	mime := http.DetectContentType(img)
 	meta := &ImageMeta{
-		UserID: userID,
-		Type: ext,
+		UserID:   userID,
+		Type:     ext,
 		MimeType: mime,
-		Width: conf.Width,
-		Height: conf.Height,
+		Width:    conf.Width,
+		Height:   conf.Height,
 	}
 	if err := m.db.SaveMeta(meta); err != nil {
 		return "", errors.Newf("error saving image meta: %v", err)
