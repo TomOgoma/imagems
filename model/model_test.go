@@ -14,6 +14,7 @@ import (
 type ConfigMock struct {
 	ExpImgsDir    string
 	ExpImgURLRoot string
+	ExpDefFolder  string
 }
 
 func (c *ConfigMock) ImagesDir() string {
@@ -22,6 +23,10 @@ func (c *ConfigMock) ImagesDir() string {
 
 func (c *ConfigMock) ImgURLRoot() string {
 	return c.ExpImgURLRoot
+}
+
+func (c *ConfigMock) DefaultFolderName() string {
+	return c.ExpDefFolder
 }
 
 type DBMock struct {
@@ -34,7 +39,7 @@ type DBMock struct {
 
 func (d *DBMock) SaveMeta(m *model.ImageMeta) error {
 	d.RecordMetaSaved = true
-	if (m != nil) {
+	if m != nil {
 		m.ID = d.ExpMetaID
 	}
 	return d.ExpSaveErr
@@ -56,8 +61,9 @@ func (f *FileWriterMock) WriteFile(fPath string, data []byte, perm os.FileMode) 
 
 const imgsDir = "test/images/"
 const imgsURLRoot = "localhost://8080/imagems_test/images/"
+const defFolder = "general"
 
-var validConf = &ConfigMock{ExpImgsDir: imgsDir, ExpImgURLRoot: imgsURLRoot}
+var validConf = &ConfigMock{ExpImgsDir: imgsDir, ExpImgURLRoot: imgsURLRoot, ExpDefFolder: defFolder}
 
 func TestNew(t *testing.T) {
 	defer tearDown(t)
@@ -80,7 +86,15 @@ func TestNew_nilConfig(t *testing.T) {
 
 func TestNew_emptyImagesDir(t *testing.T) {
 	defer tearDown(t)
-	_, err := model.New(&ConfigMock{ExpImgURLRoot: imgsURLRoot}, &DBMock{}, &FileWriterMock{})
+	_, err := model.New(&ConfigMock{ExpImgURLRoot: imgsURLRoot, ExpDefFolder: defFolder}, &DBMock{}, &FileWriterMock{})
+	if err == nil {
+		t.Fatal("Expected an error but got nil")
+	}
+}
+
+func TestNew_emptyDefaultFolderName(t *testing.T) {
+	defer tearDown(t)
+	_, err := model.New(&ConfigMock{ExpImgURLRoot: imgsURLRoot, ExpImgsDir: imgsDir}, &DBMock{}, &FileWriterMock{})
 	if err == nil {
 		t.Fatal("Expected an error but got nil")
 	}
@@ -142,6 +156,7 @@ func TestModel_NewImage(t *testing.T) {
 		FW              *FileWriterMock
 		Token           claim.Auth
 		Image           []byte
+		Folder          string
 		ExpImgURL       string
 		ExpWriteFPath   string
 		ExpErr          bool
@@ -160,12 +175,51 @@ func TestModel_NewImage(t *testing.T) {
 			FW:              &FileWriterMock{ExpErr: nil},
 			Token:           claim.Auth{UsrID: 123},
 			Image:           img1,
-			ExpImgURL:       imgsURLRoot + "123/456.png",
-			ExpWriteFPath:   imgsDir + "123/456.png",
+			Folder:          "profile",
+			ExpImgURL:       imgsURLRoot + "123/profile/456.png",
+			ExpWriteFPath:   imgsDir + "123/profile/456.png",
 			ExpErr:          false,
 			ExpIsClErr:      false,
 			ExpUnauthorized: false,
 			ExpDirCreated:   true,
+		},
+		{
+			Desc:            "Successful save png in subfolder",
+			DB:              &DBMock{ExpDelErr: nil, ExpSaveErr: nil, ExpMetaID: 456},
+			FW:              &FileWriterMock{ExpErr: nil},
+			Token:           claim.Auth{UsrID: 123},
+			Image:           img1,
+			Folder:          "profile/avatars",
+			ExpImgURL:       imgsURLRoot + "123/profile/avatars/456.png",
+			ExpWriteFPath:   imgsDir + "123/profile/avatars/456.png",
+			ExpErr:          false,
+			ExpIsClErr:      false,
+			ExpUnauthorized: false,
+			ExpDirCreated:   true,
+		},
+		{
+			Desc:            "Successful save empty folder",
+			DB:              &DBMock{ExpDelErr: nil, ExpSaveErr: nil, ExpMetaID: 456},
+			FW:              &FileWriterMock{ExpErr: nil},
+			Token:           claim.Auth{UsrID: 123},
+			Image:           img1,
+			Folder:          "",
+			ExpImgURL:       imgsURLRoot + "123/" + defFolder + "/456.png",
+			ExpWriteFPath:   imgsDir + "123/" + defFolder + "/456.png",
+			ExpErr:          false,
+			ExpIsClErr:      false,
+			ExpUnauthorized: false,
+			ExpDirCreated:   true,
+		},
+		{
+			Desc:       "Invalid chars in folder",
+			DB:         &DBMock{ExpDelErr: nil, ExpSaveErr: nil, ExpMetaID: 456},
+			FW:         &FileWriterMock{ExpErr: nil},
+			Token:      claim.Auth{UsrID: 123},
+			Image:      img1,
+			Folder:     "|?>profile*@#avatars!~`+\"",
+			ExpErr:     true,
+			ExpIsClErr: true,
 		},
 		{
 			Desc:            "Nil image",
@@ -235,7 +289,7 @@ func TestModel_NewImage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s - model.New(): %v", tc.Desc, err)
 		}
-		st, imgURL, err := m.NewImage(tc.Token, tc.Image)
+		st, imgURL, err := m.NewImage(tc.Token, tc.Folder, tc.Image)
 		if st == "" {
 			t.Errorf("%s - server time was empty", tc.Desc)
 		}
@@ -287,10 +341,12 @@ func TestModel_NewBase64Image(t *testing.T) {
 		Desc                string
 		DB                  *DBMock
 		FW                  *FileWriterMock
-		Token claim.Auth
+		Token               claim.Auth
 		Image               string
+		Folder              string
 		ExpImgURLPrefix     string
 		ExpWriteFPathPrefix string
+		ExpDirCreated       bool
 		ExpErr              bool
 		ExpIsClErr          bool
 		ExpUnauthorized     bool
@@ -306,11 +362,13 @@ func TestModel_NewBase64Image(t *testing.T) {
 			FW:                  &FileWriterMock{ExpErr: nil},
 			Token:               claim.Auth{UsrID: 123},
 			Image:               base64.StdEncoding.EncodeToString(img1),
-			ExpImgURLPrefix:     imgsURLRoot + "123/456.png",
-			ExpWriteFPathPrefix: imgsDir + "123/456.png",
+			Folder:              "profile",
+			ExpImgURLPrefix:     imgsURLRoot + "123/profile/456.png",
+			ExpWriteFPathPrefix: imgsDir + "123/profile/456.png",
 			ExpErr:              false,
 			ExpIsClErr:          false,
 			ExpUnauthorized:     false,
+			ExpDirCreated:       true,
 		},
 		{
 			Desc:            "Empty image",
@@ -338,7 +396,7 @@ func TestModel_NewBase64Image(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s - model.New(): %v", tc.Desc, err)
 		}
-		st, imgURL, err := m.NewBase64Image(tc.Token, tc.Image)
+		st, imgURL, err := m.NewBase64Image(tc.Token, tc.Folder, tc.Image)
 		if st == "" {
 			t.Errorf("%s - server time was empty", tc.Desc)
 		}
@@ -376,6 +434,10 @@ func TestModel_NewBase64Image(t *testing.T) {
 		if tc.FW.RecordWriteFilePath != tc.ExpWriteFPathPrefix {
 			t.Errorf("%s - Expected write to file at '%s', got '%s'",
 				tc.Desc, tc.ExpWriteFPathPrefix, tc.FW.RecordWriteFilePath)
+		}
+		if _, err := os.Stat(path.Dir(tc.ExpWriteFPathPrefix)); tc.ExpDirCreated && err != nil {
+			t.Errorf("%s - Expected parent directory to be created"+
+				" but: %v", tc.Desc, err)
 		}
 	}
 }

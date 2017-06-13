@@ -9,8 +9,8 @@ import (
 )
 
 type Model interface {
-	NewBase64Image(claim.Auth, string) (string, string, error)
-	NewImage(claim.Auth, []byte) (string, string, error)
+	NewBase64Image(c claim.Auth, folder, img string) (string, string, error)
+	NewImage(c claim.Auth, folder string, img []byte) (string, string, error)
 	IsAuthError(error) bool
 	IsClientError(error) bool
 }
@@ -32,9 +32,9 @@ func (s *Server) NewImage(c context.Context, req *image.NewImageRequest, resp *i
 	}
 	var imgURL string
 	if req.Image == nil {
-		st, imgURL, err = s.model.NewBase64Image(clm, req.GetImageB64())
+		st, imgURL, err = s.model.NewBase64Image(clm, req.Folder, req.GetImageB64())
 	} else {
-		st, imgURL, err = s.model.NewImage(clm, req.GetImage())
+		st, imgURL, err = s.model.NewImage(clm, req.Folder, req.GetImage())
 	}
 	if err != nil {
 		if s.model.IsAuthError(err) {

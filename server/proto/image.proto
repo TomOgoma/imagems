@@ -9,6 +9,7 @@ message NewImageRequest {
     string token = 1;
     bytes image = 2;
     string imageB64 = 3;
+    string folder = 4;
 }
 
 message NewImageResponse {

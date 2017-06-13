@@ -40,6 +40,10 @@ func (sc ServiceConfig) ImagesDir() string {
 	return path.Join(sc.DataDir, imgsDirName)
 }
 
+func (sc ServiceConfig) DefaultFolderName() string {
+	return "general"
+}
+
 func (sc ServiceConfig) ImgURLRoot() string {
 	if strings.HasSuffix(sc.ImgURL, "/") {
 		return sc.ImgURL + name
@@ -52,13 +56,13 @@ func (sc ServiceConfig) ID() string {
 }
 
 const (
-	name = "imagems"
-	apiID = "go.micro.api." + name
-	webID = "go.micro.web." + name
-	version = "0.1.0"
-	confCommand = "conf"
+	name            = "imagems"
+	apiID           = "go.micro.api." + name
+	webID           = "go.micro.web." + name
+	version         = "0.1.0"
+	confCommand     = "conf"
 	defaultConfFile = "/etc/" + name + "/" + name + ".conf.yaml"
-	imgsDirName = "images"
+	imgsDirName     = "images"
 )
 
 var confFilePath = flag.String(confCommand, defaultConfFile, "path to config file")
