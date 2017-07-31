@@ -2,11 +2,11 @@ package server
 
 import (
 	"errors"
-	"github.com/tomogoma/go-commons/server/helper"
-	"time"
-	"os"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/tomogoma/go-commons/server/helper"
+	"os"
+	"time"
 )
 
 type Logger interface {

@@ -2,23 +2,23 @@ package main
 
 import (
 	"flag"
-	"time"
-	"runtime"
 	"fmt"
 	"github.com/limetext/log4go"
 	"github.com/micro/go-micro"
-	"github.com/tomogoma/imagems/server"
+	"github.com/micro/go-web"
 	"github.com/tomogoma/go-commons/auth/token"
 	confhelper "github.com/tomogoma/go-commons/config"
 	"github.com/tomogoma/imagems/config"
-	"github.com/micro/go-web"
-	"path"
-	"github.com/tomogoma/imagems/model"
 	"github.com/tomogoma/imagems/db"
-	"os"
-	"io/ioutil"
-	"strings"
+	"github.com/tomogoma/imagems/model"
+	"github.com/tomogoma/imagems/server"
 	"github.com/tomogoma/imagems/server/proto"
+	"io/ioutil"
+	"os"
+	"path"
+	"runtime"
+	"strings"
+	"time"
 )
 
 type Logger interface {
@@ -68,7 +68,7 @@ const (
 var confFilePath = flag.String(confCommand, defaultConfFile, "path to config file")
 
 func main() {
-	flag.Parse();
+	flag.Parse()
 	defer func() {
 		runtime.Gosched()
 		time.Sleep(50 * time.Millisecond)
@@ -99,7 +99,7 @@ func bootstrap(log Logger, conf config.Config) error {
 	if err != nil {
 		return fmt.Errorf("Error instantiating model: %v", err)
 	}
-	srv, err := server.New(ServiceConfig(conf.Service), tv, m, log);
+	srv, err := server.New(ServiceConfig(conf.Service), tv, m, log)
 	if err != nil {
 		return fmt.Errorf("Error instantiating rpc server: %s", err)
 	}

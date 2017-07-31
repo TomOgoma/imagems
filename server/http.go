@@ -1,8 +1,8 @@
 package server
 
 import (
-	"net/http"
 	"github.com/gorilla/mux"
+	"net/http"
 )
 
 func (s *Server) NewHttpHandler() http.Handler {

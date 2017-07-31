@@ -1,13 +1,13 @@
 package server_test
 
 import (
-	"testing"
-	"github.com/tomogoma/imagems/server"
-	"github.com/limetext/log4go"
-	"time"
-	"os"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/limetext/log4go"
 	"github.com/tomogoma/authms/claim"
+	"github.com/tomogoma/imagems/server"
+	"os"
+	"testing"
+	"time"
 )
 
 type ConfigMock struct {
@@ -45,11 +45,11 @@ type ModelMock struct {
 	RecordNewImageCalled       bool
 }
 
-func (m *ModelMock) NewImage(claim.Auth, []byte) (string, string, error) {
+func (m *ModelMock) NewImage(claim.Auth, string, []byte) (string, string, error) {
 	m.RecordNewImageCalled = true
 	return srvTm, m.ExpImURL, m.ExpNewImErr
 }
-func (m *ModelMock) NewBase64Image(claim.Auth, string) (string, string, error) {
+func (m *ModelMock) NewBase64Image(claim.Auth, string, string) (string, string, error) {
 	m.RecordNewBase64ImageCalled = true
 	return srvTm, m.ExpImURL, m.ExpNewImErr
 }

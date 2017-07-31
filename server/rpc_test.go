@@ -1,13 +1,13 @@
 package server_test
 
 import (
-	"testing"
-	"github.com/tomogoma/imagems/server"
-	"golang.org/x/net/context"
-	"github.com/tomogoma/imagems/server/proto"
-	"reflect"
-	"net/http"
 	"errors"
+	"github.com/tomogoma/imagems/server"
+	"github.com/tomogoma/imagems/server/proto"
+	"golang.org/x/net/context"
+	"net/http"
+	"reflect"
+	"testing"
 )
 
 func TestServer_NewImage(t *testing.T) {
@@ -27,20 +27,20 @@ func TestServer_NewImage(t *testing.T) {
 			Desc: "Successfull []byte image save",
 			Auther: &TokenValidatorMock{
 				ExpIsClErr: false,
-				ExpValErr: nil,
+				ExpValErr:  nil,
 			},
 			Model: &ModelMock{
-				ExpImURL: "protocol://some.img.uri",
-				ExpNewImErr: nil,
-				ExpIsClErr: false,
+				ExpImURL:        "protocol://some.img.uri",
+				ExpNewImErr:     nil,
+				ExpIsClErr:      false,
 				ExpUnauthorized: false,
 			},
-			Req: &image.NewImageRequest{Image:make([]byte, 0)},
+			Req: &image.NewImageRequest{Image: make([]byte, 0)},
 			ExpResp: &image.NewImageResponse{
-				Code: http.StatusCreated,
-				Detail: "",
+				Code:     http.StatusCreated,
+				Detail:   "",
 				ImageURL: "protocol://some.img.uri",
-				Id: srvID,
+				Id:       srvID,
 			},
 			ExpBytesMethod: true,
 		},
@@ -48,20 +48,20 @@ func TestServer_NewImage(t *testing.T) {
 			Desc: "Successfull base64 encoded image save",
 			Auther: &TokenValidatorMock{
 				ExpIsClErr: false,
-				ExpValErr: nil,
+				ExpValErr:  nil,
 			},
 			Model: &ModelMock{
-				ExpImURL: "protocol://some.img.uri",
-				ExpNewImErr: nil,
-				ExpIsClErr: false,
+				ExpImURL:        "protocol://some.img.uri",
+				ExpNewImErr:     nil,
+				ExpIsClErr:      false,
 				ExpUnauthorized: false,
 			},
 			Req: &image.NewImageRequest{},
 			ExpResp: &image.NewImageResponse{
-				Code: http.StatusCreated,
-				Detail: "",
+				Code:     http.StatusCreated,
+				Detail:   "",
 				ImageURL: "protocol://some.img.uri",
-				Id: srvID,
+				Id:       srvID,
 			},
 			ExpBase64Method: true,
 		},
@@ -69,46 +69,46 @@ func TestServer_NewImage(t *testing.T) {
 			Desc: "invalid token",
 			Auther: &TokenValidatorMock{
 				ExpIsClErr: true,
-				ExpValErr: errors.New("unauthorized"),
+				ExpValErr:  errors.New("unauthorized"),
 			},
 			Model: &ModelMock{},
-			Req: &image.NewImageRequest{},
+			Req:   &image.NewImageRequest{},
 			ExpResp: &image.NewImageResponse{
-				Code: http.StatusUnauthorized,
+				Code:   http.StatusUnauthorized,
 				Detail: "unauthorized",
-				Id: srvID,
+				Id:     srvID,
 			},
 		},
 		{
 			Desc: "TokenValidator error",
 			Auther: &TokenValidatorMock{
 				ExpIsClErr: false,
-				ExpValErr: errors.New("some wierd error test"),
+				ExpValErr:  errors.New("some wierd error test"),
 			},
 			Model: &ModelMock{},
-			Req: &image.NewImageRequest{},
+			Req:   &image.NewImageRequest{},
 			ExpResp: &image.NewImageResponse{
-				Code: http.StatusInternalServerError,
+				Code:   http.StatusInternalServerError,
 				Detail: server.SomethingWickedError,
-				Id: srvID,
+				Id:     srvID,
 			},
 		},
 		{
 			Desc: "Model declare unauthorized",
 			Auther: &TokenValidatorMock{
 				ExpIsClErr: false,
-				ExpValErr: nil,
+				ExpValErr:  nil,
 			},
 			Model: &ModelMock{
-				ExpNewImErr: errors.New("unauthorized"),
-				ExpIsClErr: false,
+				ExpNewImErr:     errors.New("unauthorized"),
+				ExpIsClErr:      false,
 				ExpUnauthorized: true,
 			},
 			Req: &image.NewImageRequest{},
 			ExpResp: &image.NewImageResponse{
-				Code: http.StatusUnauthorized,
+				Code:   http.StatusUnauthorized,
 				Detail: "unauthorized",
-				Id: srvID,
+				Id:     srvID,
 			},
 			ExpBase64Method: true,
 		},
@@ -116,19 +116,19 @@ func TestServer_NewImage(t *testing.T) {
 			Desc: "Model declare bad request",
 			Auther: &TokenValidatorMock{
 				ExpIsClErr: false,
-				ExpValErr: nil,
+				ExpValErr:  nil,
 			},
 			Model: &ModelMock{
-				ExpImURL: "protocol://some.img.uri",
-				ExpNewImErr: errors.New("bad request"),
-				ExpIsClErr: true,
+				ExpImURL:        "protocol://some.img.uri",
+				ExpNewImErr:     errors.New("bad request"),
+				ExpIsClErr:      true,
 				ExpUnauthorized: false,
 			},
 			Req: &image.NewImageRequest{},
 			ExpResp: &image.NewImageResponse{
-				Code: http.StatusBadRequest,
+				Code:   http.StatusBadRequest,
 				Detail: "bad request",
-				Id: srvID,
+				Id:     srvID,
 			},
 			ExpBase64Method: true,
 		},
@@ -136,18 +136,18 @@ func TestServer_NewImage(t *testing.T) {
 			Desc: "Model error",
 			Auther: &TokenValidatorMock{
 				ExpIsClErr: false,
-				ExpValErr: nil,
+				ExpValErr:  nil,
 			},
 			Model: &ModelMock{
-				ExpNewImErr: errors.New("some internal test error"),
-				ExpIsClErr: false,
+				ExpNewImErr:     errors.New("some internal test error"),
+				ExpIsClErr:      false,
 				ExpUnauthorized: false,
 			},
 			Req: &image.NewImageRequest{},
 			ExpResp: &image.NewImageResponse{
-				Code: http.StatusInternalServerError,
+				Code:   http.StatusInternalServerError,
 				Detail: server.SomethingWickedError,
-				Id: srvID,
+				Id:     srvID,
 			},
 			ExpBase64Method: true,
 		},

@@ -1,16 +1,16 @@
 package main
 
 import (
-	"testing"
-	"github.com/tomogoma/imagems/config"
 	"flag"
-	confhelper "github.com/tomogoma/go-commons/config"
 	"github.com/limetext/log4go"
+	confhelper "github.com/tomogoma/go-commons/config"
+	"github.com/tomogoma/imagems/config"
+	"testing"
 	"time"
 )
 
 func init() {
-	flag.Parse();
+	flag.Parse()
 }
 
 func Test_bootstrap(t *testing.T) {

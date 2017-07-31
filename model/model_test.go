@@ -1,14 +1,14 @@
 package model_test
 
 import (
-	"testing"
-	"github.com/tomogoma/imagems/model"
-	"os"
-	"errors"
-	"io/ioutil"
 	"encoding/base64"
-	"path"
+	"errors"
 	"github.com/tomogoma/authms/claim"
+	"github.com/tomogoma/imagems/model"
+	"io/ioutil"
+	"os"
+	"path"
+	"testing"
 )
 
 type ConfigMock struct {

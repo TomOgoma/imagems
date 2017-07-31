@@ -1,12 +1,12 @@
 package db_test
 
 import (
-	"testing"
-	"github.com/tomogoma/go-commons/database/cockroach"
-	"github.com/tomogoma/imagems/db"
 	"flag"
 	"github.com/tomogoma/go-commons/config"
+	"github.com/tomogoma/go-commons/database/cockroach"
+	"github.com/tomogoma/imagems/db"
 	"github.com/tomogoma/imagems/model"
+	"testing"
 )
 
 type ConfigMock struct {
@@ -46,7 +46,7 @@ func TestDB_SaveMeta(t *testing.T) {
 	if err != nil {
 		t.Fatalf("db.New(): %v", err)
 	}
-	meta := &model.ImageMeta{UserID:1234}
+	meta := &model.ImageMeta{UserID: 1234}
 	if err := d.SaveMeta(meta); err != nil {
 		t.Fatalf("db.SaveMeta(): %v", err)
 	}
@@ -62,7 +62,7 @@ func TestDB_DeleteMeta(t *testing.T) {
 	if err != nil {
 		t.Fatalf("db.New(): %v", err)
 	}
-	meta := &model.ImageMeta{UserID:1234}
+	meta := &model.ImageMeta{UserID: 1234}
 	if err := d.SaveMeta(meta); err != nil {
 		t.Fatalf("db.SaveMeta(): %v", err)
 	}

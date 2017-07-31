@@ -2,10 +2,10 @@ package db
 
 import (
 	"database/sql"
-	"github.com/tomogoma/go-commons/database/cockroach"
 	"errors"
-	"github.com/tomogoma/imagems/model"
 	"fmt"
+	"github.com/tomogoma/go-commons/database/cockroach"
+	"github.com/tomogoma/imagems/model"
 )
 
 type DB struct {

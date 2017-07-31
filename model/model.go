@@ -1,24 +1,24 @@
 package model
 
 import (
-	"os"
-	"time"
+	"bytes"
+	"encoding/base64"
+	"fmt"
+	"github.com/tomogoma/authms/claim"
 	"github.com/tomogoma/go-commons/errors"
 	"image"
-	"bytes"
-	"strconv"
-	"path"
-	"net/url"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-	"net/http"
-	"fmt"
-	"encoding/base64"
-	"strings"
 	"io/ioutil"
-	"github.com/tomogoma/authms/claim"
+	"net/http"
+	"net/url"
+	"os"
+	"path"
 	"regexp"
+	"strconv"
+	"strings"
+	"time"
 )
 
 type ImageMeta struct {
@@ -58,6 +58,7 @@ type Model struct {
 }
 
 const timeFormat = time.RFC3339
+
 var noneFolderChars = regexp.MustCompile("\\W")
 
 func New(c Config, db DB, fw FileWriter) (*Model, error) {
@@ -75,11 +76,11 @@ func New(c Config, db DB, fw FileWriter) (*Model, error) {
 		return nil, errors.Newf("error parsing image url: %v", err)
 	}
 	return &Model{
-		imgsDir: c.ImagesDir(),
+		imgsDir:   c.ImagesDir(),
 		defFolder: c.DefaultFolderName(),
-		imgURL: imgURLRoot,
-		db: db,
-		fw: fw,
+		imgURL:    imgURLRoot,
+		db:        db,
+		fw:        fw,
 	}, nil
 }
 

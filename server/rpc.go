@@ -1,11 +1,11 @@
 package server
 
 import (
-	"golang.org/x/net/context"
+	"github.com/tomogoma/authms/claim"
 	"github.com/tomogoma/imagems/server/proto"
+	"golang.org/x/net/context"
 	"net/http"
 	"time"
-	"github.com/tomogoma/authms/claim"
 )
 
 type Model interface {
