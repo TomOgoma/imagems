@@ -23,7 +23,7 @@ service:
   # - typically the URL which `micro web` is listening on.
   # - the URL must be complete i.e. protocol://host
   # e.g. http://localhost:8082
-  imgURL: :8082
+  imgURL:
 
 # auth configures authentication/authorization values.
 auth:
@@ -33,7 +33,7 @@ auth:
   # - Typically, the file is a copy of the file used by the token generating
   #   entity to generate tokens e.g. https://github.com/tomogoma/authms 's
   #   tokenKeyFile.
-  tokenKeyFile: /etc/authms/ssh-keys/sha256.key
+  tokenKeyFile: /etc/authms/keys/jwt_sha256.key
 
 # database configures access to the cockroach/postgres data stores
 database:
@@ -43,8 +43,6 @@ database:
   # the host:port or :port scheme for accessing the database server.
   host: localhost:26257
   dbName: imagems
-  sslCert: /etc/cockroachdb/certs/node.cert
+  sslCert: /etc/cockroachdb/certs/node.crt
   sslKey: /etc/cockroachdb/certs/node.key
-  sslRootCert: /etc/cockroachdb/certs/ca.cert
-
-
+  sslRootCert: /etc/cockroachdb/certs/ca.crt
