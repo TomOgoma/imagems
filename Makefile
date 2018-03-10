@@ -1,11 +1,17 @@
-.PHONY: install
+.PHONY: clean build install uninstall
 
-build:
-	go build -o install/imagems-installer-version
+clean:
+	go version
+	rm -f bin/*
+	rm -f install/vars.sh
+	rm -rf install/docs
+	rm -rf cmd/gcloud/conf/docs
+
+build: clean
+	go run build.go --goos "$(goos)" --goarch "$(goarch)" --goarm "$(goarm)"
 
 install:
-	cd "install" && sudo ./systemd-install.sh
+	$(MAKE) -C "install" install
 
 uninstall:
-	cd "install" && sudo ./systemd-uninstall.sh
-
+	$(MAKE) -C "install" uninstall

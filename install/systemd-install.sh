@@ -1,22 +1,49 @@
 #!/usr/bin/env bash
 
-NAME="imagems"
-BUILD_NAME="${NAME}-installer-version"
-CONF_DIR="/etc/${NAME}"
-CONF_FILE="${CONF_DIR}/${NAME}.conf.yaml"
-INSTALL_DIR="/usr/local/bin"
-UNIT_FILE="/etc/systemd/system/${NAME}.service"
-EXIT_CODE_FAIL=1
+source vars.sh
 
-./systemd-uninstall.sh || exit ${EXIT_CODE_FAIL}
-echo "Begin install"
-mkdir -p "${CONF_DIR}" || exit ${EXIT_CODE_FAIL}
+printUnitFile() {
+read -r -d '' UNIT_CONTENTS  << EOF
+[Unit]
+Description=${DESCRIPTION}
+Wants=network-online.target
+After=network.target network-online.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+ExecStart=${INSTALL_FILE}
+SyslogIdentifier=${CANONICAL_NAME}
+Restart=always
+RestartSec=10
+EOF
+echo "$UNIT_CONTENTS" > ${UNIT_FILE} || exit 1
+}
+
+printDetails() {
+    echo "name:              $NAME"
+    echo "version:           $VERSION"
+    echo "description:       $DESCRIPTION"
+    echo "canonical name:    $CANONICAL_NAME"
+    echo "conf dir:          $CONF_DIR"
+    echo "conf file:         $CONF_FILE"
+    echo "install file:      $INSTALL_FILE"
+    echo "systemd unit file: $UNIT_FILE"
+    echo "docs dir:          $DOCS_DIR"
+}
+
+mkdir -p "${CONF_DIR}" || exit 1
+cp -rf docs "${DOCS_DIR}" || exit 1
 if [ ! -f "${CONF_FILE}" ]; then
-    cp "${NAME}.conf.yaml" "${CONF_FILE}" || exit ${EXIT_CODE_FAIL}
+    cp "conf.yml" "${CONF_FILE}" || exit 1
 fi
-mkdir -p "${INSTALL_DIR}" || exit ${EXIT_CODE_FAIL}
-cp -f "${BUILD_NAME}" "${INSTALL_DIR}/${NAME}" || exit ${EXIT_CODE_FAIL}
-cp -f "${NAME}.service" "${UNIT_FILE}" || exit ${EXIT_CODE_FAIL}
-systemctl enable "${NAME}.service"
-echo "Config file is at '${CONF_FILE}'"
-echo "Install complete"
+
+mkdir -p "${INSTALL_DIR}" || exit 1
+cp -f ../bin/app "${INSTALL_FILE}" || exit 1
+printUnitFile
+systemctl enable "${UNIT_NAME}"
+systemctl daemon-reload
+systemctl start "${UNIT_NAME}"
+
+printDetails
