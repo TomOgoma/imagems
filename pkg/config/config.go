@@ -6,22 +6,38 @@ import (
 	"io/ioutil"
 	"gopkg.in/yaml.v2"
 	"fmt"
+	"path"
+	"strings"
 )
 
 type Auth struct {
-	TokenKeyFile string `json:"tokenKeyFile" yaml:"tokenKeyFile"`
+	TokenKeyFile  string `json:"tokenKeyFile" yaml:"tokenKeyFile"`
+	GenAPIKeyFile string `json:"genAPIKeyFile" yaml:"genAPIKeyFile"`
 }
 
 type Service struct {
-	RegisterInterval time.Duration `yaml:"registerInterval,omitempty"`
-	DataDir          string        `yaml:"dataDir,omitempty"`
-	ImgURL           string        `yaml:"imgURL,omitempty"`
+	RegisterInterval   time.Duration `yaml:"registerInterval" json:"registerInterval"`
+	DataDir            string        `yaml:"dataDir" json:"dataDir"`
+	ImgURL             string        `yaml:"imgURL" json:"imgURL"`
+	LoadBalanceVersion string        `yaml:"loadBalanceVersion" json:"loadBalanceVersion"`
+}
+
+func (sc Service) ImagesDir() string {
+	return path.Join(sc.DataDir, imgsDirName)
+}
+
+func (sc Service) DefaultFolderName() string {
+	return "general"
+}
+
+func (sc Service) ImgURLRoot() string {
+	return strings.TrimSuffix(sc.ImgURL, "/") + WebRootURL()
 }
 
 type Config struct {
-	Auth     Auth        `yaml:"auth,omitempty"`
-	Service  Service     `yaml:"service,omitempty"`
-	Database crdb.Config `yaml:"database"`
+	Auth     Auth        `yaml:"auth" json:"auth"`
+	Service  Service     `yaml:"service" json:"service"`
+	Database crdb.Config `yaml:"database" json:"database"`
 }
 
 func ReadFile(fName string) (*Config, error) {

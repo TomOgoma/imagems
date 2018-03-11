@@ -1,133 +1,94 @@
-package http
+package main
 
 import (
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
-	"runtime"
-	"strings"
-	"time"
 
-	"github.com/limetext/log4go"
-	"github.com/micro/go-micro"
 	"github.com/micro/go-web"
-	"github.com/tomogoma/go-commons/auth/token"
-	confhelper "github.com/tomogoma/go-commons/config"
 	"github.com/tomogoma/imagems/pkg/config"
 	"github.com/tomogoma/imagems/pkg/roach"
 	"github.com/tomogoma/imagems/pkg/model"
-	"github.com/tomogoma/imagems/pkg/handler"
-	"github.com/tomogoma/imagems/pkg/handler/proto"
+	"github.com/tomogoma/imagems/pkg/logging/logrus"
+	"github.com/tomogoma/imagems/pkg/logging"
+	"github.com/tomogoma/imagems/pkg/jwt"
+	jwt2 "github.com/tomogoma/jwt"
+	"github.com/tomogoma/go-typed-errors"
+	"github.com/tomogoma/imagems/pkg/handler/http"
+	"github.com/tomogoma/imagems/pkg/api"
 )
 
-type Logger interface {
-	Fine(interface{}, ...interface{})
-	Info(interface{}, ...interface{})
-	Warn(interface{}, ...interface{}) error
-	Error(interface{}, ...interface{}) error
+var confFilePath = flag.String(
+	"conf",
+	config.DefaultConfPath(),
+	"path to config file",
+)
+
+func main() {
+	log := &logrus.Wrapper{}
+	conf, err := config.ReadFile(*confFilePath)
+	if err != nil {
+		log.Fatalf("Error reading config file: %s", err)
+		return
+	}
+	err = bootstrap(log, *conf)
+	log.Fatalf("Quit with error: %v", err)
+}
+
+// bootstrap collects all the dependencies necessary to start the server,
+// injects said dependencies, and proceeds to register it as a micro grpc handler.
+func bootstrap(log logging.Logger, conf config.Config) error {
+
+	jwtKey, err := ioutil.ReadFile(conf.Auth.TokenKeyFile)
+	if err != nil {
+		return errors.Newf("read auth token key file: %v", err)
+	}
+	jwter, err := jwt2.NewHandler(jwtKey)
+	if err != nil {
+		return errors.Newf("new jwt handler: %v", err)
+	}
+	tknVal, err := jwt.NewValidator(jwter)
+	if err != nil {
+		return errors.Newf("new jwt validator: %v", err)
+	}
+
+	d := roach.New(
+		roach.WithDSN(conf.Database.FormatDSN()),
+		roach.WithDBName(conf.Database.DBName),
+	)
+	if err := d.InitDBIfNot(); err != nil {
+		log.Warnf("Unable to initialize database connection: %v", err)
+	}
+
+	m, err := model.New(conf.Service, tknVal, d, FileWriter(ioutil.WriteFile))
+	if err != nil {
+		return fmt.Errorf("new model: %v", err)
+	}
+
+	genAPIKey, err := ioutil.ReadFile(conf.Auth.GenAPIKeyFile)
+	if err != nil {
+		log.Warnf("No general API key found: %v", err)
+		genAPIKey = []byte{}
+	}
+	g, err := api.NewGuard(d, api.WithMasterKey(string(genAPIKey)))
+
+	handler, err := http.NewHandler(conf.Service, m, g, log)
+	if err != nil {
+		return fmt.Errorf("new HTTP handler: %s", err)
+	}
+
+	wb := web.NewService(
+		web.Handler(handler),
+		web.Name(config.CanonicalWebName()),
+		web.Version(conf.Service.LoadBalanceVersion),
+		web.RegisterInterval(conf.Service.RegisterInterval),
+	)
+	return wb.Run()
 }
 
 type FileWriter func(fileName string, data []byte, perm os.FileMode) error
 
 func (f FileWriter) WriteFile(fName string, dt []byte, perm os.FileMode) error {
 	return f(fName, dt, perm)
-}
-
-type ServiceConfig config.Service
-
-func (sc ServiceConfig) ImagesDir() string {
-	return path.Join(sc.DataDir, imgsDirName)
-}
-
-func (sc ServiceConfig) DefaultFolderName() string {
-	return "general"
-}
-
-func (sc ServiceConfig) ImgURLRoot() string {
-	if strings.HasSuffix(sc.ImgURL, "/") {
-		return sc.ImgURL + name
-	}
-	return sc.ImgURL + "/" + name
-}
-
-func (sc ServiceConfig) ID() string {
-	return apiID
-}
-
-const (
-	name            = "imagems"
-	apiID           = "go.micro.api." + name
-	webID           = "go.micro.web." + name
-	version         = "0.1.0"
-	confCommand     = "conf"
-	defaultConfFile = "/etc/" + name + "/" + name + ".conf.yaml"
-	imgsDirName     = "images"
-)
-
-var confFilePath = flag.String(confCommand, defaultConfFile, "path to config file")
-
-func main() {
-	flag.Parse()
-	defer func() {
-		runtime.Gosched()
-		time.Sleep(50 * time.Millisecond)
-	}()
-	conf := config.Config{}
-	log := log4go.NewDefaultLogger(log4go.FINEST)
-	err := confhelper.ReadYamlConfig(*confFilePath, &conf)
-	if err != nil {
-		log.Critical("Error reading config file: %s", err)
-		return
-	}
-	err = bootstrap(log, conf)
-	log.Critical("Quit with error: %v", err)
-}
-
-// bootstrap collects all the dependencies necessary to start the server,
-// injects said dependencies, and proceeds to register it as a micro grpc handler.
-func bootstrap(log Logger, conf config.Config) error {
-	tv, err := token.NewJWTHandler(conf.Auth)
-	if err != nil {
-		return fmt.Errorf("Error instantiating token validator: %s", err)
-	}
-	d, err := roach.New(conf.Database)
-	if err != nil {
-		return fmt.Errorf("Error instantiating database: %v", err)
-	}
-	m, err := model.New(ServiceConfig(conf.Service), d, FileWriter(ioutil.WriteFile))
-	if err != nil {
-		return fmt.Errorf("Error instantiating model: %v", err)
-	}
-	srv, err := handler.New(ServiceConfig(conf.Service), tv, m, log)
-	if err != nil {
-		return fmt.Errorf("Error instantiating rpc server: %s", err)
-	}
-	rpc := micro.NewService(
-		micro.Name(apiID),
-		micro.Version(version),
-		micro.RegisterInterval(conf.Service.RegisterInterval),
-	)
-	image.RegisterImageHandler(rpc.Server(), srv)
-	wb := web.NewService(
-		web.Name(webID),
-		web.Version(version),
-		web.RegisterInterval(conf.Service.RegisterInterval),
-	)
-	wb.Handle("/", srv.NewHttpHandler())
-	errCH := make(chan error)
-	go func() {
-		if err := rpc.Run(); err != nil {
-			errCH <- fmt.Errorf("Error serving rpc: %s", err)
-		}
-		errCH <- nil
-	}()
-	go func() {
-		if err := wb.Run(); err != nil {
-			errCH <- fmt.Errorf("Error serving web: %s", err)
-		}
-		errCH <- nil
-	}()
-	return <-errCH
 }

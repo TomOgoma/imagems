@@ -20,6 +20,8 @@ const (
 	APIKeyLength = 56
 
 	DocsPath = "docs"
+
+	imgsDirName     = "images"
 )
 
 var (

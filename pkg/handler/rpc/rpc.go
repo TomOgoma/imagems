@@ -1,8 +1,7 @@
 package rpc
 
 import (
-	"github.com/tomogoma/authms/claim"
-	"github.com/tomogoma/imagems/pkg/serverrver/proto"
+	"github.com/tomogoma/imagems/pkg/handler/proto"
 	"golang.org/x/net/context"
 	"net/http"
 	"time"

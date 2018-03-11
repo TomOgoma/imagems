@@ -1,14 +1,13 @@
-package model
+package model_test
 
 import (
 	"encoding/base64"
 	"errors"
-	"github.com/tomogoma/authms/claim"
-	"github.com/tomogoma/imagems/pkg/modelodel"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
+	"github.com/tomogoma/imagems/pkg/model"
 )
 
 type ConfigMock struct {
@@ -32,7 +31,7 @@ func (c *ConfigMock) DefaultFolderName() string {
 type DBMock struct {
 	ExpSaveErr      error
 	ExpDelErr       error
-	ExpMetaID       int64
+	ExpMetaID       string
 	RecordMetaSaved bool
 	RecordMetaDeld  bool
 }

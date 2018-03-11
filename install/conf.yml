@@ -1,0 +1,83 @@
+# Image Processing Micro-Service configuration file
+#
+# - case is very important; maintain the case.
+# - indentation is very important; mind the indentation.
+# - all strings containing special characters should be escaped by double quotes.
+#   Special characters include:
+#   ` [] {} : > | ` .
+#
+
+
+# service configures the Micro-service's runtime profile.
+service:
+
+  # registerInterval configures how often a micro-service should ping the front
+  # facing Gateway API with alive packets. Formatting is as follows:
+  # 2d3h4m5s -> after every "2 days, 3 hours, 4 minutes and 5 seconds"
+  registerInterval: 5s
+
+  # dataDir is the /path/to/directory holding all state files for the micro-service
+  dataDir: /var/data/imagems
+
+  # imgURL is the publicly accessible URL that the load balancer accepts requests
+  # from.
+  # - typically the URL which `micro web` is listening on.
+  # - the URL must be complete i.e. protocol://host
+  # e.g. http://localhost:8082
+  imgURL:
+
+  # loadBalanceVersion identifies which cluster this instance will belong to
+  # when deploying multiple instances of the micro-service.
+  # More information here:
+  # https://micro.mu/blog/2016/04/18/micro-architecture.html#versioning
+  loadBalanceVersion: cluster1
+
+
+# auth configures authentication/authorization values.
+auth:
+
+  # tokenKeyFile defines the location of the file containing the token key used
+  # by the authentication micro-service for JWT generation.
+  tokenKeyFile: /etc/imagems/keys/jwt_sha256.key
+
+  # genAPIKeyFile defines the location of the file containing general API
+  # key if needed. Any next line or space characters will be treated as part
+  # of the API key.
+  genAPIKeyFile: /etc/imagems/keys/gen_api.key
+
+
+# database contains configuration values for accessing CockroachDB as the
+# persistent store for the micro-service.
+# For documentation on getting these values, visit https://www.cockroachlabs.com
+database:
+  # user - The user to sign in as
+  user: root
+  # password - The user's password
+  password:
+  # host - The host to connect to. Values that start with / are for unix domain
+  # sockets. (default is localhost)
+  host:
+  # port - The port to bind to. (default is 5432)
+  port: 26257
+  # dbname - The name of the database to connect to
+  dbName: imagems
+  # connect_timeout - Maximum wait for connection, in seconds. Zero or not
+  # specified means wait indefinitely.
+  connectTimeout:
+  # sslmode - Whether or not to use SSL (default is require).
+  # Valid values are:
+  # disable     - No SSL
+  # require     - Always SSL (skip verification)
+  # verify-ca   - Always SSL (verify that the certificate presented
+  #               by the server was signed by a trusted CA)
+  # verify-full - Always SSL (verify that the certification presented by the
+  #               server was signed by a trusted CA and the server host name
+  #               matches the one in the certificate)
+  sslMode: verify-ca
+  # sslcert - Cert file location. The file must contain PEM encoded data.
+  sslCert: /etc/cockroachdb/certs/node.crt
+  # sslkey - Key file location. The file must contain PEM encoded data.
+  sslKey: /etc/cockroachdb/certs/node.key
+  # sslrootcert - The location of the root certificate file. The file must
+  # contain PEM encoded data.
+  sslRootCert: /etc/cockroachdb/certs/ca.crt

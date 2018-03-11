@@ -8,7 +8,6 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -18,11 +17,14 @@ import (
 	"strings"
 	"time"
 	"github.com/tomogoma/go-typed-errors"
+	"io"
+	"io/ioutil"
+	"github.com/dgrijalva/jwt-go"
 )
 
 type ImageMeta struct {
-	ID          int64
-	UserID      int64
+	ID          string
+	UserID      string
 	Width       int
 	Height      int
 	Type        string
@@ -38,7 +40,7 @@ type Config interface {
 }
 
 type DB interface {
-	SaveMeta(*ImageMeta) error
+	SaveMeta(ImageMeta) (int64, error)
 	DeleteMeta(int64) error
 }
 
@@ -46,21 +48,29 @@ type FileWriter interface {
 	WriteFile(fileName string, data []byte, perm os.FileMode) error
 }
 
-type Model struct {
-	imgsDir   string
-	imgURL    *url.URL
-	defFolder string
-	db        DB
-	fw        FileWriter
-	errors.ClErrCheck
-	errors.AuthErrCheck
+type JWTClaim struct {
+	UsrID string
+	jwt.StandardClaims
 }
 
-const timeFormat = time.RFC3339
+type TokenValidator interface {
+	Validate(JWT string) (*JWTClaim, error)
+	errors.IsAuthErrChecker
+}
+
+type Model struct {
+	imgsDir      string
+	imgURL       *url.URL
+	defFolder    string
+	db           DB
+	fw           FileWriter
+	tknValidator TokenValidator
+	errors.ErrToHTTP
+}
 
 var noneFolderChars = regexp.MustCompile("\\W")
 
-func New(c Config, db DB, fw FileWriter) (*Model, error) {
+func New(c Config, tv TokenValidator, db DB, fw FileWriter) (*Model, error) {
 	if err := validateConfig(c); err != nil {
 		return nil, err
 	}
@@ -75,69 +85,85 @@ func New(c Config, db DB, fw FileWriter) (*Model, error) {
 		return nil, errors.Newf("error parsing image url: %v", err)
 	}
 	return &Model{
-		imgsDir:   c.ImagesDir(),
-		defFolder: c.DefaultFolderName(),
-		imgURL:    imgURLRoot,
-		db:        db,
-		fw:        fw,
+		imgsDir:      c.ImagesDir(),
+		defFolder:    c.DefaultFolderName(),
+		imgURL:       imgURLRoot,
+		db:           db,
+		fw:           fw,
+		tknValidator: tv,
 	}, nil
 }
 
-func (m *Model) NewBase64Image(t claim.Auth, folder, imgStr string) (string, string, error) {
-	st := time.Now().Format(timeFormat)
+func (m *Model) NewBase64Image(token, folder, imgStr string) (time.Time, string, error) {
 	if imgStr == "" {
-		return st, "", errors.NewClient("empty image provided")
+		return time.Now(), "", errors.NewClient("empty image provided")
 	}
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(imgStr))
-	imgB, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return st, "", errors.NewClient("unable to decode image content")
-	}
-	return m.NewImage(t, folder, imgB)
+	return m.NewImage(token, folder, ioutil.NopCloser(reader))
 }
 
-func (m *Model) NewImage(t claim.Auth, folder string, img []byte) (string, string, error) {
-	st := time.Now().Format(timeFormat)
-	if hasSpecialChars(folder) {
-		return st, "", errors.NewClient("Special characters are not allowed in folders")
+func (m *Model) NewImage(token, folder string, r io.ReadCloser) (time.Time, string, error) {
+
+	t, err := m.tknValidator.Validate(token)
+	if err != nil {
+		if m.tknValidator.IsAuthError(err) {
+			return time.Now(), "", errors.NewUnauthorized(err)
+		}
+		return time.Now(), "", errors.Newf("validate token: %v", err)
 	}
+
+	if hasSpecialChars(folder) {
+		return time.Now(), "", errors.NewClient("Special characters are not allowed in folders")
+	}
+
+	img, err := ioutil.ReadAll(r)
+	if err != nil {
+		return time.Now(), "", errors.NewClient("unable to decode image content")
+	}
+	defer r.Close()
+
 	conf, ext, err := image.DecodeConfig(bytes.NewReader(img))
 	if err != nil {
 		ext = "bmp"
 		if !isBitmap(img) {
-			return st, "", errors.NewClient("unsuported image type")
+			return time.Now(), "", errors.NewClient("unsuported image type")
 		}
 	}
 	mime := http.DetectContentType(img)
-	meta := &ImageMeta{
+	meta := ImageMeta{
 		UserID:   t.UsrID,
 		Type:     ext,
 		MimeType: mime,
 		Width:    conf.Width,
 		Height:   conf.Height,
 	}
-	if err := m.db.SaveMeta(meta); err != nil {
-		return st, "", errors.Newf("error saving image meta: %v", err)
+
+	metaID, err := m.db.SaveMeta(meta)
+	if err != nil {
+		return time.Now(), "", errors.Newf("error saving image meta: %v", err)
 	}
-	fName := strconv.FormatInt(meta.ID, 10) + "." + ext
+	meta.ID = strconv.FormatInt(metaID, 10)
+
+	fName := meta.ID + "." + ext
 	if folder == "" {
 		folder = m.defFolder
 	}
-	pathSuffix := path.Join(strconv.FormatInt(t.UsrID, 10), folder, fName)
+	pathSuffix := path.Join(t.UsrID, folder, fName)
 	fPath := path.Join(m.imgsDir, pathSuffix)
+
 	if err := os.MkdirAll(path.Dir(fPath), 0755); err != nil {
-		return st, "", errors.Newf("error creating image dest dir: %v", err)
+		return time.Now(), "", errors.Newf("error creating image dest dir: %v", err)
 	}
 	if err := m.fw.WriteFile(fPath, img, 0644); err != nil {
-		rollBackErr := m.db.DeleteMeta(meta.ID)
+		rollBackErr := m.db.DeleteMeta(metaID)
 		if rollBackErr != nil {
 			err = fmt.Errorf("%v ...further while undoing db changes: %v", err, rollBackErr)
 		}
-		return st, "", errors.Newf("error saving image to file: %v", err)
+		return time.Now(), "", errors.Newf("error saving image to file: %v", err)
 	}
 	URL := *m.imgURL
 	URL.Path = path.Join(URL.Path, pathSuffix)
-	return st, URL.String(), nil
+	return time.Now(), URL.String(), nil
 }
 
 func hasSpecialChars(folder string) bool {

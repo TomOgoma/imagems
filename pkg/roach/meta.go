@@ -7,13 +7,13 @@ import (
 func (r *Roach) SaveMeta(m model.ImageMeta) (int64, error) {
 
 	if err := r.InitDBIfNot(); err != nil {
-		return "", err
+		return -1, err
 	}
 
 	cols := ColDesc(ColUserID, ColType, ColMimeType, ColWidth, ColHeight,
 		ColCreateDate, ColUpdateDate)
 	q := `
-	INSERT INTO ` + TblImageMeta + ` ` + cols + `
+	INSERT INTO ` + TblImageMeta + ` (` + cols + `)
 		VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 		RETURNING ` + ColID + `
 	`

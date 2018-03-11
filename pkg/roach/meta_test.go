@@ -17,7 +17,7 @@ func TestDB_SaveMeta(t *testing.T) {
 	defer tearDown()
 
 	d := roach.New(getOpts(conf)...)
-	meta := model.ImageMeta{UserID: 1234}
+	meta := model.ImageMeta{UserID: "1234"}
 	ID, err := d.SaveMeta(meta)
 	if err != nil {
 		t.Fatalf("db.SaveMeta(): %v", err)
@@ -32,7 +32,7 @@ func TestDB_DeleteMeta(t *testing.T) {
 	defer tearDown()
 
 	d := roach.New(getOpts(conf)...)
-	meta := model.ImageMeta{UserID: 1234}
+	meta := model.ImageMeta{UserID: "1234"}
 	ID, err := d.SaveMeta(meta)
 	if err != nil {
 		t.Fatalf("db.SaveMeta(): %v", err)

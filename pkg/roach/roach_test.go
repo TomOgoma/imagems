@@ -17,7 +17,7 @@ var (
 	confPath = flag.String(
 		"conf",
 		config.DefaultConfPath(),
-		"/path/to/imagems.conf.yaml",
+		"/path/to/imagems.conf.yml",
 	)
 
 	currID = int64(1)
@@ -203,10 +203,10 @@ func dropAllTables(rdb *sql.DB, dbName string) error {
 	if !haveDB {
 		return nil
 	}
-	for i := len(roach.AllTableNames) - 1; i >= 0; i-- {
-		_, err := rdb.Exec("DROP TABLE IF EXISTS " + roach.AllTableNames[i])
+	for i := len(roach.TblNames) - 1; i >= 0; i-- {
+		_, err := rdb.Exec("DROP TABLE IF EXISTS " + roach.TblNames[i])
 		if err != nil {
-			return errors.Newf("drop %s: %v", roach.AllTableNames[i], err)
+			return errors.Newf("drop %s: %v", roach.TblNames[i], err)
 		}
 	}
 	return nil

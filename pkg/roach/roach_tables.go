@@ -5,6 +5,7 @@ const (
 
 	TblConfigurations = "configurations"
 	TblImageMeta      = "image_meta"
+	TblAPIKeys        = "api_keys"
 
 	ColID         = "ID"
 	ColUserID     = "user_id"
@@ -28,20 +29,27 @@ const (
 	);
 	`
 
+	TblDescAPIKeys = `
+	CREATE TABLE IF NOT EXISTS ` + TblAPIKeys + ` (
+		` + ColID + ` BIGSERIAL PRIMARY KEY NOT NULL CHECK (` + ColID + `>0),
+		` + ColUserID + ` VARCHAR(256) NOT NULL CHECK (` + ColUserID + ` != ''),
+		` + ColKey + ` VARCHAR(256) NOT NULL CHECK ( LENGTH(` + ColKey + `) >= 56 ),
+		` + ColCreateDate + ` TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		` + ColUpdateDate + ` TIMESTAMPTZ NOT NULL
+	);
+	`
+
 	TblDescImageMeta = `
 	CREATE TABLE IF NOT EXISTS ` + TblImageMeta + ` (
-		` + ColID + ` SERIAL PRIMARY KEY,
-		` + ColUserID + ` INT NOT NULL,
-		` + ColType + ` STRING,
-		` + ColMimeType + ` STRING,
+		` + ColID + ` BIGSERIAL PRIMARY KEY NOT NULL CHECK (` + ColID + `>0),
+		` + ColUserID + ` BIGINT NOT NULL CHECK (` + ColUserID + `>0),
+		` + ColType + ` VARCHAR(256),
+		` + ColMimeType + ` VARCHAR(256),
 		` + ColWidth + ` FLOAT,
 		` + ColHeight + ` FLOAT,
-		` + ColCreateDate + ` TIMESTAMP NOT NULL,
-		` + ColUpdateDate + ` TIMESTAMP NOT NULL,
-		` + ColDeleted + ` BOOL NOT NULL DEFAULT FALSE,
-		INDEX(` + ColUserID + `),
-		INDEX(` + ColType + `),
-		INDEX(` + ColMimeType + `)
+		` + ColCreateDate + ` TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		` + ColUpdateDate + ` TIMESTAMPTZ NOT NULL,
+		` + ColDeleted + ` BOOL NOT NULL DEFAULT FALSE
 	);
 	`
 )
@@ -51,6 +59,7 @@ var (
 	// (tables with foreign key references listed after parent table descriptions).
 	TblNames = []string{
 		TblConfigurations,
+		TblAPIKeys,
 		TblImageMeta,
 	}
 
@@ -58,6 +67,7 @@ var (
 	// (tables with foreign key references listed after parent table descriptions).
 	TblDescs = []string{
 		TblDescConfigurations,
+		TblDescAPIKeys,
 		TblDescImageMeta,
 	}
 )

@@ -1,17 +1,15 @@
 package roach
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
 
-	"github.com/cockroachdb/cockroach-go/crdb"
-	"github.com/tomogoma/authms/config"
 	cockroach "github.com/tomogoma/crdb"
 	"github.com/tomogoma/go-typed-errors"
+	"github.com/tomogoma/imagems/pkg/config"
 )
 
 // Roach is a cockroach db store.
@@ -73,7 +71,7 @@ func (r *Roach) instantiate() error {
 	if r.isDBInit {
 		return nil
 	}
-	if err := cockroach.InstantiateDB(r.db, r.dbName, TblDescImageMeta); err != nil {
+	if err := cockroach.InstantiateDB(r.db, r.dbName, TblDescs...); err != nil {
 		return errors.Newf("instantiating db: %v", err)
 	}
 	if err := r.validateRunningVersion(); err != nil {
