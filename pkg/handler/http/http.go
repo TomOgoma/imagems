@@ -224,7 +224,7 @@ func (h *handler) newImage(w http.ResponseWriter, r *http.Request) {
 	var err error
 	req.Image, _, err = r.FormFile("image")
 	if err != nil {
-		h.handleError(w, r, req, err)
+		h.handleError(w, r, req, errors.NewClientf("unable to read image form-file: %v", err))
 		return
 	}
 
