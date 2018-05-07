@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/tomogoma/authms/claim"
-	"github.com/tomogoma/go-commons/errors"
+	"github.com/tomogoma/go-typed-errors"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
