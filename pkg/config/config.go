@@ -1,13 +1,13 @@
 package config
 
 import (
-	"time"
-	"github.com/tomogoma/crdb"
-	"io/ioutil"
-	"gopkg.in/yaml.v2"
 	"fmt"
+	"github.com/tomogoma/crdb"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"path"
 	"strings"
+	"time"
 )
 
 type Auth struct {
@@ -20,6 +20,7 @@ type Service struct {
 	DataDir            string        `yaml:"dataDir" json:"dataDir"`
 	ImgURL             string        `yaml:"imgURL" json:"imgURL"`
 	LoadBalanceVersion string        `yaml:"loadBalanceVersion" json:"loadBalanceVersion"`
+	Address            string        `yaml:"address" json:"address"`
 }
 
 func (sc Service) ImagesDir() string {

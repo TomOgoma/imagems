@@ -32,6 +32,10 @@ service:
   # https://micro.mu/blog/2016/04/18/micro-architecture.html#versioning
   loadBalanceVersion: cluster1
 
+  # address is the address to use if running the standalone API.
+  # e.g. :8080
+  address:
+
 
 # auth configures authentication/authorization values.
 auth:

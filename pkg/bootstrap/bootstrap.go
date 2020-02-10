@@ -1,56 +1,37 @@
-package main
+package bootstrap
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 
-	"github.com/micro/go-web"
-	"github.com/tomogoma/imagems/pkg/config"
-	"github.com/tomogoma/imagems/pkg/roach"
-	"github.com/tomogoma/imagems/pkg/model"
-	"github.com/tomogoma/imagems/pkg/logging/logrus"
-	"github.com/tomogoma/imagems/pkg/logging"
-	"github.com/tomogoma/imagems/pkg/jwt"
-	jwt2 "github.com/tomogoma/jwt"
 	"github.com/tomogoma/go-typed-errors"
-	"github.com/tomogoma/imagems/pkg/handler/http"
 	"github.com/tomogoma/imagems/pkg/api"
+	"github.com/tomogoma/imagems/pkg/config"
+	"github.com/tomogoma/imagems/pkg/handler/http"
+	"github.com/tomogoma/imagems/pkg/jwt"
+	"github.com/tomogoma/imagems/pkg/logging"
+	"github.com/tomogoma/imagems/pkg/model"
+	"github.com/tomogoma/imagems/pkg/roach"
+	jwt2 "github.com/tomogoma/jwt"
+	netHttp "net/http"
 )
-
-var confFilePath = flag.String(
-	"conf",
-	config.DefaultConfPath(),
-	"path to config file",
-)
-
-func main() {
-	log := &logrus.Wrapper{}
-	conf, err := config.ReadFile(*confFilePath)
-	if err != nil {
-		log.Fatalf("Error reading config file: %s", err)
-		return
-	}
-	err = bootstrap(log, *conf)
-	log.Fatalf("Quit with error: %v", err)
-}
 
 // bootstrap collects all the dependencies necessary to start the server,
 // injects said dependencies, and proceeds to register it as a micro grpc handler.
-func bootstrap(log logging.Logger, conf config.Config) error {
+func Bootstrap(log logging.Logger, conf config.Config) (netHttp.Handler, error) {
 
 	jwtKey, err := ioutil.ReadFile(conf.Auth.TokenKeyFile)
 	if err != nil {
-		return errors.Newf("read auth token key file: %v", err)
+		return nil, errors.Newf("read auth token key file: %v", err)
 	}
 	jwter, err := jwt2.NewHandler(jwtKey)
 	if err != nil {
-		return errors.Newf("new jwt handler: %v", err)
+		return nil, errors.Newf("new jwt handler: %v", err)
 	}
 	tknVal, err := jwt.NewValidator(jwter)
 	if err != nil {
-		return errors.Newf("new jwt validator: %v", err)
+		return nil, errors.Newf("new jwt validator: %v", err)
 	}
 
 	d := roach.New(
@@ -63,7 +44,7 @@ func bootstrap(log logging.Logger, conf config.Config) error {
 
 	m, err := model.New(conf.Service, tknVal, d, FileWriter(ioutil.WriteFile))
 	if err != nil {
-		return fmt.Errorf("new model: %v", err)
+		return nil, fmt.Errorf("new model: %v", err)
 	}
 
 	genAPIKey, err := ioutil.ReadFile(conf.Auth.GenAPIKeyFile)
@@ -75,16 +56,9 @@ func bootstrap(log logging.Logger, conf config.Config) error {
 
 	handler, err := http.NewHandler(conf.Service, m, g, log)
 	if err != nil {
-		return fmt.Errorf("new HTTP handler: %s", err)
+		return nil, fmt.Errorf("new HTTP handler: %s", err)
 	}
-
-	wb := web.NewService(
-		web.Handler(handler),
-		web.Name(config.CanonicalWebName()),
-		web.Version(conf.Service.LoadBalanceVersion),
-		web.RegisterInterval(conf.Service.RegisterInterval),
-	)
-	return wb.Run()
+	return handler, nil
 }
 
 type FileWriter func(fileName string, data []byte, perm os.FileMode) error
