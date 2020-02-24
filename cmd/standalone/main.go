@@ -23,6 +23,7 @@ func main() {
 		return
 	}
 	handler, err := bootstrap.Bootstrap(log, *conf)
+	log.Infof("Listen on '%s'...", conf.Service.Address)
 	err = http2.ListenAndServe(conf.Service.Address, handler)
 	log.Fatalf("Quit with error: %v", err)
 }
