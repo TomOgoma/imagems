@@ -10,7 +10,7 @@ import (
 // during runtime.
 const (
 	Name        = "imagems"
-	VersionFull = "0.1.0" // Use http://semver.org standards
+	VersionFull = "0.2.0" // Use http://semver.org standards
 	Description = "Image Micro-Service"
 
 	RPCNamePrefix = ""
@@ -21,7 +21,7 @@ const (
 
 	DocsPath = "docs"
 
-	imgsDirName     = "images"
+	imgsDirName = "images"
 )
 
 var (
