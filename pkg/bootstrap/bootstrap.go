@@ -54,7 +54,7 @@ func Bootstrap(log logging.Logger, conf config.Config) (netHttp.Handler, error) 
 	}
 	g, err := api.NewGuard(d, api.WithMasterKey(string(genAPIKey)))
 
-	handler, err := http.NewHandler(conf.Service, m, g, log)
+	handler, err := http.NewHandler(conf.Service, m, g, log, conf.Service.AllowedOrigins...)
 	if err != nil {
 		return nil, fmt.Errorf("new HTTP handler: %s", err)
 	}

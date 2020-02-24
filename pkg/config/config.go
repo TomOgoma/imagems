@@ -21,6 +21,7 @@ type Service struct {
 	ImgURL             string        `yaml:"imgURL" json:"imgURL"`
 	LoadBalanceVersion string        `yaml:"loadBalanceVersion" json:"loadBalanceVersion"`
 	Address            string        `yaml:"address" json:"address"`
+	AllowedOrigins     []string      `yaml:"allowedOrigins" json:"allowedOrigins"`
 }
 
 func (sc Service) ImagesDir() string {

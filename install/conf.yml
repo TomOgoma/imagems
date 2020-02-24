@@ -36,6 +36,21 @@ service:
   # e.g. :8080
   address:
 
+  # allowedOrigins is a list of entries provided for Access-Control-Allow-Origin header
+  # It takes the formats:
+  #
+  # Allow all origins access
+  # - "*"
+  #
+  # or Allow specific domains e.g. "http://localhost"
+  # - "domain1"
+  # - "domain2"
+  # - ...
+  #
+  # or Block all other domains, but the serving host:
+  # "null" or "" or left empty
+  allowedOrigins:
+
 
 # auth configures authentication/authorization values.
 auth:
